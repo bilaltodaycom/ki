@@ -1,156 +1,99 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>BilalToday Chatbot</title>
-  <link rel="stylesheet" href="style.css" />
-  <link rel="icon" href="data:;base64,iVBORw0KGgo=" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BilalToday Chatbot</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div id="app" class="app dark">
-    <!-- Sidebar -->
-    <aside class="sidebar" aria-label="Seitenleiste">
-      <div class="sidebar-top">
-        <button id="newChatBtn" class="btn new-chat" title="Neuer Chat">➕ Neuer Chat</button>
-        <div class="sidebar-actions">
-          <button id="clearChatsBtn" class="btn clear" title="Alle Chats löschen">🗑️ Alle Chats löschen</button>
+
+    <!-- START POPUP -->
+    <div id="startPopup" class="popup hidden">
+        <div class="popup-content">
+            <h2>Willkommen beim BilalToday Chatbot!</h2>
+            <p>Wie heißt du?</p>
+            <input type="text" id="usernameInput" placeholder="Dein Name...">
+            <button id="popupContinue">Weiter</button>
         </div>
-      </div>
+    </div>
 
-      <div class="chats-list" id="chatsList" aria-live="polite">
-        <!-- Chat items dynamisch -->
-      </div>
+    <!-- SETTINGS POPUP -->
+    <div id="settingsPopup" class="popup hidden">
+        <div class="popup-content settings-content">
+            <h2>Einstellungen</h2>
 
-      <div class="sidebar-footer">
-        <small id="userGreeting">Willkommen</small>
-      </div>
-    </aside>
+            <label>Dein Name</label>
+            <input id="settingsName" type="text">
 
-    <!-- Hauptbereich -->
-    <main class="main" role="main">
-      <header class="main-header">
-        <h1 id="chatTitle">BilalToday</h1>
-        <div class="header-right">
-          <button id="settingsBtn" class="icon-btn" title="Einstellungen">⚙️</button>
-        </div>
-      </header>
-
-      <section class="chat-window" id="chatWindow" aria-live="polite">
-        <!-- Nachrichten -->
-      </section>
-
-      <footer class="composer" role="region" aria-label="Eingabe">
-        <div class="composer-left">
-          <input id="messageInput" type="text" placeholder="Schreibe eine Nachricht..." aria-label="Nachricht" />
-        </div>
-        <button id="sendBtn" class="send-btn" title="Senden" aria-label="Senden">
-          <span class="paper-plane" id="plane">✈️</span>
-        </button>
-      </footer>
-
-      <div class="status-bar">
-        <small id="serverStatus">BilalToday Server verbindet...</small>
-      </div>
-    </main>
-
-    <!-- Einstellungen Modal -->
-    <div id="settingsModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
-      <div class="modal-card">
-        <header class="modal-header">
-          <h2 id="settingsTitle">Einstellungen</h2>
-          <button id="closeSettings" class="close" title="Schließen">✖</button>
-        </header>
-
-        <div class="modal-body">
-          <label>
-            1. Name ändern
-            <input id="settingsName" type="text" />
-            <div style="display:flex; gap:.5rem; margin-top:6px;">
-              <button id="saveName" class="btn small">Speichern</button>
-            </div>
-          </label>
-
-          <label>
-            2. Theme wählen
-            <select id="themeSelect">
-              <option value="dark">Dark</option>
-              <option value="light">Light</option>
-              <option value="purple">Purple</option>
-              <option value="ocean">Ocean Blue</option>
+            <label>Theme</label>
+            <select id="settingsTheme">
+                <option value="dark">Dark</option>
+                <option value="light">Light</option>
+                <option value="purple">Purple</option>
+                <option value="ocean">Ocean Blue</option>
             </select>
-            <button id="saveTheme" class="btn small">Speichern</button>
-          </label>
 
-          <label>
-            3. Modell auswählen
-            <select id="modelSelect">
-              <option value="mini">BilalToday Mini</option>
-              <option value="pro">BilalToday Pro</option>
-              <option value="nano">BilalToday Nano</option>
+            <label>KI-Modell</label>
+            <select id="settingsModel">
+                <option value="mini">BilalToday Mini</option>
+                <option value="pro">BilalToday Pro</option>
+                <option value="nano">BilalToday Nano</option>
             </select>
-            <button id="saveModel" class="btn small">Auswählen</button>
-          </label>
 
-          <label>
-            4. BilalToday.com
-            <a href="https://bilaltoday.com" target="_blank" rel="noopener">Zur Seite</a>
-          </label>
+            <button id="settingsSave">Speichern</button>
+            <button id="settingsClose">Schließen</button>
 
-          <label>
-            5. Über die App
-            <p class="muted">BilalToday Chatbot — Clientseitige Demo mit Offline-Fallbacks. Version unten.</p>
-          </label>
-
-          <label>
-            6. Versionsnummer
-            <p class="muted">v1.1.0</p>
-          </label>
+            <p class="info">
+                <a href="https://bilaltoday.com" target="_blank">BilalToday.com</a><br>
+                Version 1.0.0
+            </p>
         </div>
-      </div>
     </div>
 
-    <!-- Erst-Start Popup -->
-    <div id="welcomePopup" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="welcomeTitle">
-      <div class="modal-card">
-        <h2 id="welcomeTitle">Willkommen beim BilalToday Chatbot!</h2>
-        <p>Wie heißt du?</p>
-        <input id="welcomeName" type="text" placeholder="Dein Name" />
-        <div style="text-align:right; margin-top:10px;">
-          <button id="welcomeContinue" class="btn">Weiter</button>
+    <!-- MODEL VERIFICATION POPUP -->
+    <div id="modelPopup" class="popup hidden">
+        <div class="popup-content">
+            <h2>Kundennummer erforderlich</h2>
+            <p>Bitte gib deine gültige BilalToday-Kundennummer ein.</p>
+            <input type="number" id="modelNumber" placeholder="z. B. 4163">
+            <button id="modelSubmit">Bestätigen</button>
         </div>
-      </div>
     </div>
 
-    <!-- Modell Aktivierung Popup -->
-    <div id="modelPopup" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modelTitle">
-      <div class="modal-card">
-        <h3 id="modelTitle">Kundennummer erforderlich</h3>
-        <p>Bitte gib deine gültige BilalToday-Kundennummer ein.</p>
-        <input id="customerNumber" type="text" placeholder="Kundennummer" />
-        <div style="display:flex; gap:.5rem; justify-content:flex-end; margin-top:12px;">
-          <button id="cancelModel" class="btn small">Abbrechen</button>
-          <button id="confirmModel" class="btn small">Bestätigen</button>
-        </div>
-        <p id="modelError" class="error small hidden">Ungültige Nummer</p>
-      </div>
+    <!-- LAYOUT -->
+    <div id="container">
+
+        <!-- SIDEBAR -->
+        <aside id="sidebar">
+            <button id="newChat" class="sidebar-btn">+ Neuer Chat</button>
+
+            <h3>Chats</h3>
+            <div id="chatList"></div>
+
+            <button id="deleteAll" class="sidebar-btn btn-danger">Alle Chats löschen</button>
+        </aside>
+
+        <!-- CHAT AREA -->
+        <main id="chatArea">
+            <header>
+                <h2 id="chatTitle">BilalToday Chat</h2>
+                <button id="settingsBtn" class="icon-btn">⚙️</button>
+            </header>
+
+            <div id="messages"></div>
+
+            <footer id="inputArea">
+                <input type="text" id="messageInput" placeholder="Nachricht eingeben...">
+                <button id="sendBtn">Senden</button>
+            </footer>
+
+            <div id="serverStatus">Verbinde...</div>
+        </main>
+
     </div>
 
-    <!-- Templates -->
-    <template id="chatItemTpl">
-      <div class="chat-item">
-        <div class="chat-item-title"></div>
-        <div class="chat-item-meta"></div>
-      </div>
-    </template>
-
-    <template id="messageTpl">
-      <div class="message">
-        <div class="message-inner"></div>
-      </div>
-    </template>
-  </div>
-
-  <script src="script.js" defer></script>
+<script src="script.js"></script>
 </body>
 </html>
+
