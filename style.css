@@ -1,0 +1,93 @@
+/* style.css - BilalToday Chatbot (v1.1.0)
+   Modernes, rundes Design, Standardfarbe: dunkelblau #0b1b3f
+   Saubere Kommentare, responsive, für GitHub Pages geeignet.
+*/
+
+/* Reset & Basis */
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; }
+:root{
+  --bg:#04102a;
+  --panel:#0b1b3f;
+  --muted:#9aa4bf;
+  --accent:#1e90ff;
+  --accent-2:#6ea8fe;
+  --glass: rgba(255,255,255,0.04);
+  --radius:14px;
+}
+body,html,#app { height:100%; background: linear-gradient(180deg,#04102a 0%, #061028 100%); color:#e7eefc; }
+.app { display:flex; height:100vh; }
+
+/* Sidebar */
+.sidebar{
+  width:300px; min-width:260px; background:linear-gradient(180deg,var(--panel), #07102a);
+  padding:16px; display:flex; flex-direction:column; gap:12px;
+  box-shadow: 6px 0 20px rgba(2,6,23,0.6);
+  border-radius:0 18px 18px 0;
+}
+.btn { width:100%; padding:10px 12px; border-radius:10px; border:0; background:var(--glass); color:var(--muted); cursor:pointer; transition:all .18s ease; }
+.btn:hover { transform:translateY(-2px); background:rgba(255,255,255,0.06); color:#fff; }
+.new-chat { font-weight:600; color:#fff; background: linear-gradient(90deg,var(--accent),var(--accent-2)); box-shadow:0 6px 18px rgba(16,40,100,0.25); }
+
+.sidebar .chats-list { flex:1; overflow:auto; display:flex; flex-direction:column; gap:8px; padding-top:6px; }
+.chat-item {
+  padding:10px; border-radius:10px; background:transparent; cursor:pointer; transition:all .12s;
+  display:flex; justify-content:space-between; align-items:center;
+}
+.chat-item:hover { background: rgba(255,255,255,0.02); transform:translateX(4px); }
+.chat-item-title { font-weight:600; color:#fff; }
+.chat-item-meta { font-size:12px; color:var(--muted); }
+
+/* Main */
+.main { flex:1; display:flex; flex-direction:column; background:transparent; border-left:1px solid rgba(255,255,255,0.02); }
+.main-header { display:flex; justify-content:space-between; align-items:center; padding:18px 20px; border-bottom:1px solid rgba(255,255,255,0.03); }
+.main-header h1 { font-size:20px; color:var(--accent-2); letter-spacing:0.6px; }
+.icon-btn { background:transparent; border:0; cursor:pointer; font-size:18px; padding:8px; border-radius:8px; color:var(--muted); }
+.icon-btn:hover { background:rgba(255,255,255,0.02); color:#fff; transform:scale(1.03); }
+
+/* Chat window */
+.chat-window { flex:1; padding:20px; overflow:auto; display:flex; flex-direction:column; gap:12px; }
+.message { max-width:78%; padding:12px 14px; border-radius:12px; box-shadow: 0 6px 18px rgba(2,6,23,0.4); transition:all .12s ease; }
+.message.user { margin-left:auto; background: linear-gradient(90deg,#163b9e, #1b53b8); color:#fff; border-bottom-right-radius:6px; }
+.message.bot { margin-right:auto; background: rgba(255,255,255,0.03); color:var(--muted); border-bottom-left-radius:6px; }
+.message .message-inner { white-space:pre-wrap; word-wrap:break-word; }
+
+/* Typing indicator */
+.typing { font-style:italic; color:var(--muted); background:transparent; box-shadow:none; }
+
+/* Composer */
+.composer { display:flex; gap:10px; align-items:center; padding:12px; border-top:1px solid rgba(255,255,255,0.03); background:linear-gradient(180deg, rgba(255,255,255,0.01), transparent); }
+.composer input { flex:1; padding:10px 12px; border-radius:999px; border:0; outline:none; background:rgba(255,255,255,0.03); color:#eaf2ff; }
+.send-btn { width:56px; height:44px; border-radius:12px; border:0; display:flex; align-items:center; justify-content:center; cursor:pointer; background:linear-gradient(90deg,var(--accent),var(--accent-2)); box-shadow: 0 8px 26px rgba(16,40,100,0.22); transition:transform .12s; }
+.send-btn:active { transform:translateY(2px) scale(.99); }
+.paper-plane { display:inline-block; transform-origin:center; transition:transform .36s ease; }
+.send-btn.sending .paper-plane { animation:plane 1s linear infinite; transform:translateY(-2px) rotate(-10deg); }
+@keyframes plane { 0%{transform:translateY(0) rotate(-5deg)}50%{transform:translateY(-6px) rotate(10deg)}100%{transform:translateY(0) rotate(-5deg)} }
+
+/* Footer status */
+.status-bar { padding:8px 18px; font-size:12px; color:var(--muted); border-top:1px solid rgba(255,255,255,0.02); }
+
+/* Modal */
+.modal { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(2,6,23,0.6); z-index:50; }
+.modal.hidden { display:none; }
+.modal-card { background:linear-gradient(180deg,#07172b,#071026); padding:18px; border-radius:16px; width:420px; max-width:92%; box-shadow:0 10px 40px rgba(2,6,23,0.7); color:#e9f2ff; }
+.modal-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+.modal-body { display:flex; flex-direction:column; gap:10px; margin-top:6px; }
+.modal .btn.small { padding:6px 8px; font-size:13px; border-radius:8px; }
+
+/* Utilities */
+.hidden { display:none; }
+.muted { color:var(--muted); font-size:13px; }
+.error { color:#ff7b7b; }
+
+/* Themes */
+.app.light { --bg:#f5f7fb; --panel:#fdfdfd; --muted:#58627a; --accent:#2b6cff; color:#0b2236; }
+.app.purple { --panel:#2c1444; --accent:#7b61ff; --accent-2:#a889ff; }
+.app.ocean { --panel:#073a59; --accent:#1fb6ff; --accent-2:#76d3ff; }
+
+/* Responsive */
+@media (max-width:900px){
+  .sidebar{ display:none; }
+  .main-header h1{ font-size:18px; }
+  .chat-window { padding:12px; }
+  .composer { padding:10px; }
+}
