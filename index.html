@@ -5,95 +5,110 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BilalToday Chatbot</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 </head>
-<body>
+<body class="dark-theme">
 
-    <!-- START POPUP -->
-    <div id="startPopup" class="popup hidden">
+    <div id="start-popup" class="popup-overlay">
         <div class="popup-content">
             <h2>Willkommen beim BilalToday Chatbot!</h2>
             <p>Wie heißt du?</p>
-            <input type="text" id="usernameInput" placeholder="Dein Name...">
-            <button id="popupContinue">Weiter</button>
+            <input type="text" id="username-input" placeholder="Dein Name">
+            <button id="start-button" class="btn primary-btn">Weiter</button>
         </div>
     </div>
 
-    <!-- SETTINGS POPUP -->
-    <div id="settingsPopup" class="popup hidden">
-        <div class="popup-content settings-content">
-            <h2>Einstellungen</h2>
-
-            <label>Dein Name</label>
-            <input id="settingsName" type="text">
-
-            <label>Theme</label>
-            <select id="settingsTheme">
-                <option value="dark">Dark</option>
-                <option value="light">Light</option>
-                <option value="purple">Purple</option>
-                <option value="ocean">Ocean Blue</option>
-            </select>
-
-            <label>KI-Modell</label>
-            <select id="settingsModel">
-                <option value="mini">BilalToday Mini</option>
-                <option value="pro">BilalToday Pro</option>
-                <option value="nano">BilalToday Nano</option>
-            </select>
-
-            <button id="settingsSave">Speichern</button>
-            <button id="settingsClose">Schließen</button>
-
-            <p class="info">
-                <a href="https://bilaltoday.com" target="_blank">BilalToday.com</a><br>
-                Version 1.0.0
-            </p>
-        </div>
-    </div>
-
-    <!-- MODEL VERIFICATION POPUP -->
-    <div id="modelPopup" class="popup hidden">
+    <div id="customer-popup" class="popup-overlay hidden">
         <div class="popup-content">
-            <h2>Kundennummer erforderlich</h2>
+            <h3>Modell-Aktivierung</h3>
             <p>Bitte gib deine gültige BilalToday-Kundennummer ein.</p>
-            <input type="number" id="modelNumber" placeholder="z. B. 4163">
-            <button id="modelSubmit">Bestätigen</button>
+            <input type="password" id="customer-input" placeholder="Kundennummer (4163)">
+            <p id="customer-error" class="error-message"></p>
+            <div class="button-group">
+                <button id="customer-cancel" class="btn secondary-btn">Abbrechen</button>
+                <button id="customer-submit" class="btn primary-btn">Aktivieren</button>
+            </div>
         </div>
     </div>
 
-    <!-- LAYOUT -->
-    <div id="container">
+    <div id="settings-popup" class="popup-overlay hidden">
+        <div class="popup-content">
+            <h2><i class="fas fa-cog"></i> Einstellungen</h2>
+            
+            <section>
+                <h3>Nutzer</h3>
+                <label for="settings-username">Name ändern:</label>
+                <input type="text" id="settings-username">
+                <button id="save-username" class="btn small-btn">Speichern</button>
+            </section>
 
-        <!-- SIDEBAR -->
+            <section>
+                <h3>Theme</h3>
+                <select id="theme-select">
+                    <option value="dark">Dark</option>
+                    <option value="light">Light</option>
+                    <option value="purple">Purple</option>
+                    <option value="ocean-blue">Ocean Blue</option>
+                </select>
+            </section>
+            
+            <section>
+                <h3>KI-Modell</h3>
+                <select id="model-select">
+                    <option value="Mini">BilalToday Mini</option>
+                    <option value="Pro">BilalToday Pro</option>
+                    <option value="Nano">BilalToday Nano</option>
+                </select>
+                <p id="model-status" class="model-info"></p>
+            </section>
+            
+            <section>
+                <h3>Über</h3>
+                <p>Version: <span id="app-version">1.0.0</span></p>
+                <p>Informationen: Der BilalToday Chatbot ist eine hochmoderne, Gemini-basierte KI-Anwendung.</p>
+                <a href="https://bilaltoday.com" target="_blank" class="link"><i class="fas fa-link"></i> BilalToday.com</a>
+            </section>
+
+            <button id="close-settings" class="btn primary-btn">Schließen</button>
+        </div>
+    </div>
+
+    <div id="app-container">
+
         <aside id="sidebar">
-            <button id="newChat" class="sidebar-btn">+ Neuer Chat</button>
-
-            <h3>Chats</h3>
-            <div id="chatList"></div>
-
-            <button id="deleteAll" class="sidebar-btn btn-danger">Alle Chats löschen</button>
+            <div class="sidebar-header">
+                <button id="new-chat-btn" class="sidebar-btn"><i class="fas fa-plus"></i> Neuer Chat</button>
+            </div>
+            
+            <div id="chat-history-list" class="chat-history">
+                </div>
+            
+            <div class="sidebar-footer">
+                <button id="delete-all-chats-btn" class="sidebar-btn delete-btn"><i class="fas fa-trash-alt"></i> Alle Chats löschen</button>
+            </div>
         </aside>
 
-        <!-- CHAT AREA -->
-        <main id="chatArea">
-            <header>
-                <h2 id="chatTitle">BilalToday Chat</h2>
-                <button id="settingsBtn" class="icon-btn">⚙️</button>
+        <main id="chat-main">
+            <header id="chat-header">
+                <h1 id="chat-title">BilalToday Chatbot</h1>
+                <i id="settings-btn" class="fas fa-cog settings-icon" title="Einstellungen"></i>
             </header>
 
-            <div id="messages"></div>
+            <div id="chat-messages">
+                </div>
 
-            <footer id="inputArea">
-                <input type="text" id="messageInput" placeholder="Nachricht eingeben...">
-                <button id="sendBtn">Senden</button>
-            </footer>
+            <div id="input-area">
+                <textarea id="user-input" placeholder="Nachricht eingeben..."></textarea>
+                <button id="send-btn" class="send-btn" disabled>
+                    <i class="fas fa-paper-plane send-icon"></i>
+                </button>
+            </div>
 
-            <div id="serverStatus">Verbinde...</div>
+            <footer id="status-footer">
+                </footer>
         </main>
-
     </div>
 
-<script src="script.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>
-
