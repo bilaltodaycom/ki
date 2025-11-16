@@ -1,1005 +1,156 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="de">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BilalToday KI-Assistent</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-        
-        /* Standard Blue Theme */
-        :root {
-            --theme-color: #3b82f6; /* Blue 500 */
-            --theme-color-dark: #2563eb; /* Blue 600 */
-            --theme-color-light: #60a5fa; /* Blue 400 */
-        }
-
-        /* Farbschemata */
-        .theme-blue { --theme-color: #3b82f6; --theme-color-dark: #2563eb; --theme-color-light: #60a5fa; }
-        .theme-red { --theme-color: #ef4444; --theme-color-dark: #dc2626; --theme-color-light: #f87171; }
-        .theme-purple { --theme-color: #a855f7; --theme-color-dark: #9333ea; --theme-color-light: #c084fc; }
-        .theme-yellow { --theme-color: #f59e0b; --theme-color-dark: #d97706; --theme-color-light: #fbbf24; }
-
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #111827; /* Dunkler Hintergrund */
-            color: #d1d5db; /* Heller Text */
-        }
-        
-        /* Layout */
-        .app-container {
-            display: flex;
-            height: 100vh;
-            width: 100vw;
-            overflow: hidden;
-        }
-        
-        /* --- Sidebar --- */
-        #sidebar {
-            width: 260px;
-            background-color: #1f2937;
-            padding: 1rem;
-            display: flex;
-            flex-direction: column;
-            transition: transform 0.3s ease-in-out;
-            z-index: 40;
-            border-right: 1px solid #374151;
-        }
-        
-        /* Mobile Sidebar Handling */
-        @media (max-width: 768px) {
-            #sidebar {
-                position: absolute;
-                left: 0;
-                top: 0;
-                height: 100%;
-                transform: translateX(-100%);
-            }
-            #sidebar.open {
-                transform: translateX(0);
-            }
-            #sidebar-backdrop {
-                position: fixed;
-                inset: 0;
-                background-color: rgba(0, 0, 0, 0.5);
-                z-index: 30;
-            }
-        }
-        
-        #chat-list {
-            flex-grow: 1;
-            overflow-y: auto;
-        }
-        
-        .chat-list-item {
-            padding: 0.75rem 1rem;
-            border-radius: 0.5rem;
-            cursor: pointer;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        .chat-list-item.active {
-            background-color: #374151;
-        }
-        .chat-list-item:hover {
-            background-color: #4b5563;
-        }
-
-        /* --- Main Chat Content --- */
-        .main-content {
-            flex-grow: 1;
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-            background-color: #111827;
-        }
-        
-        .chat-history {
-            flex-grow: 1;
-            overflow-y: auto;
-            padding: 1.5rem;
-            scroll-behavior: smooth;
-        }
-
-        /* Chat Bubbles */
-        .user-bubble {
-            background-color: var(--theme-color);
-            color: white;
-            align-self: flex-end;
-            max-width: 85%;
-            border-radius: 1rem 1rem 0.375rem 1rem;
-        }
-        .ai-bubble {
-            background-color: #374151;
-            color: #f3f4f6;
-            align-self: flex-start;
-            max-width: 90%;
-            border-radius: 1rem 1rem 1rem 0.375rem;
-        }
-        .bubble {
-            padding: 0.8rem 1.2rem;
-            margin-bottom: 0.75rem;
-            line-height: 1.5;
-            word-wrap: break-word;
-        }
-
-        /* Input Area */
-        #user-input {
-            border: 1px solid #4b5563;
-            background-color: #1f2937;
-            color: #f3f4f6;
-        }
-        #user-input:focus {
-            border-color: var(--theme-color-light);
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
-            outline: none;
-        }
-        #send-button {
-            background-color: var(--theme-color);
-        }
-        
-        /* Overlays */
-        .modal-backdrop {
-            position: fixed;
-            inset: 0;
-            background-color: rgba(0, 0, 0, 0.7);
-            backdrop-filter: blur(5px);
-            z-index: 50;
-        }
-        .modal-content {
-            background-color: #1f2937;
-            border: 1px solid #4b5563;
-            color: #f3f4f6;
-        }
-        
-        /* Theme Swatches */
-        .theme-swatch {
-            width: 44px;
-            height: 44px;
-            border-radius: 50%;
-            cursor: pointer;
-            box-shadow: 0 0 0 3px transparent;
-            transition: box-shadow 0.2s, transform 0.1s;
-        }
-        .theme-swatch.selected {
-            box-shadow: 0 0 0 4px var(--theme-color), 0 0 0 6px #1f2937;
-        }
-        
-        /* Language Buttons */
-        .lang-button {
-            background-color: #374151;
-            border: 1px solid #4b5563;
-        }
-        .lang-button.selected {
-            background-color: var(--theme-color-light);
-            color: white;
-            border-color: var(--theme-color);
-        }
-    </style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>BilalToday Chatbot</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="icon" href="data:;base64,iVBORw0KGgo=" />
 </head>
-<body class="theme-blue">
-
-    <div class="app-container">
-        
-        <!-- Sidebar Backdrop (Mobile) -->
-        <div id="sidebar-backdrop" class="hidden md:hidden" onclick="toggleSidebar()"></div>
-
-        <!-- Sidebar -->
-        <aside id="sidebar" class="md:translate-x-0">
-            <!-- Neuer Chat Button -->
-            <button onclick="startNewChat()" class="w-full flex items-center justify-center space-x-2 p-3 mb-4 rounded-lg border border-gray-600 text-gray-200 hover:bg-gray-700 transition duration-150">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
-                </svg>
-                <span id="new-chat-btn-text">Neuer Chat</span>
-            </button>
-            
-            <!-- Chat History List -->
-            <div id="chat-list" class="space-y-1">
-                <!-- Chat-Liste wird hier dynamisch eingefügt -->
-            </div>
-            
-            <!-- Settings Button -->
-            <div class="mt-auto border-t border-gray-700 pt-4">
-                <button id="settings-button" class="w-full flex items-center space-x-3 p-3 rounded-lg text-gray-300 hover:bg-gray-700 transition duration-150">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                    <span id="settings-btn-text">Einstellungen</span>
-                </button>
-            </div>
-        </aside>
-
-        <!-- Main Chat Content -->
-        <main class="main-content">
-            <!-- Chat Header -->
-            <header class="chat-header flex justify-between items-center bg-gray-800 p-4 border-b border-gray-700">
-                <button id="menu-toggle" class="p-2 text-gray-400 hover:text-white md:hidden" onclick="toggleSidebar()">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-                    </svg>
-                </button>
-                <h1 id="app-title" class="text-xl font-bold text-gray-200 text-center md:text-left flex-grow">BilalToday KI-Assistent</h1>
-            </header>
-
-            <!-- Chat History -->
-            <div id="chat-history" class="chat-history flex flex-col">
-                <!-- Initialer Placeholder, der versteckt wird, sobald der Name eingegeben wurde oder ein Chat geladen ist. -->
-                <div id="initial-message" class="ai-bubble self-start mr-auto bubble">
-                    Bitte gib deinen Namen im Popup ein, um zu beginnen.
-                </div>
-            </div>
-
-            <!-- Input Area -->
-            <div class="input-area p-4 border-t border-gray-700 bg-gray-900">
-                <div class="flex items-center space-x-2">
-                    <input type="text" id="user-input" class="flex-grow p-3 rounded-full focus:ring-0" placeholder="Nachricht eingeben...">
-                    <button id="send-button" class="p-3 text-white rounded-full flex-shrink-0" onclick="sendMessage()">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M13 5l7 7-7 7M5 12h14" />
-                        </svg>
-                    </button>
-                </div>
-                <div id="loading-indicator" class="hidden mt-2 text-sm text-gray-400 flex items-center justify-center">
-                    <span class="mr-2" id="loading-text">Antwort wird generiert</span>
-                </div>
-            </div>
-        </main>
-    </div>
-
-    <!-- Name Prompt Modal (Pop-up) -->
-    <div id="name-prompt-modal" class="modal-backdrop hidden flex items-center justify-center">
-        <div class="modal-content p-6 rounded-xl w-11/12 max-w-sm">
-            <h2 id="name-prompt-title" class="text-2xl font-bold mb-4 text-center">Hallo!</h2>
-            <p id="name-prompt-subtitle" class="text-lg mb-6 text-center text-gray-300">Wie heißt du?</p>
-            <input type="text" id="name-input" class="w-full p-3 rounded-lg mb-6 bg-gray-800 border-gray-600 focus:ring-blue-500 focus:border-blue-500" placeholder="Dein Name...">
-            <button id="submit-name-button" class="w-full p-3 rounded-lg text-white font-bold" style="background-color: var(--theme-color);">Weiter</button>
+<body>
+  <div id="app" class="app dark">
+    <!-- Sidebar -->
+    <aside class="sidebar" aria-label="Seitenleiste">
+      <div class="sidebar-top">
+        <button id="newChatBtn" class="btn new-chat" title="Neuer Chat">➕ Neuer Chat</button>
+        <div class="sidebar-actions">
+          <button id="clearChatsBtn" class="btn clear" title="Alle Chats löschen">🗑️ Alle Chats löschen</button>
         </div>
-    </div>
+      </div>
 
-    <!-- Settings Overlay (Hidden by default) -->
-    <div id="settings-overlay" class="modal-backdrop hidden flex items-center justify-center">
-        <div class="modal-content max-h-[80vh] overflow-y-auto p-6 rounded-xl w-11/12 max-w-lg">
-            <div class="flex justify-between items-center mb-6">
-                <h2 id="settings-title" class="text-2xl font-bold">Einstellungen</h2>
-                <button id="close-settings" class="text-gray-400 hover:text-white">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                </button>
-            </div>
+      <div class="chats-list" id="chatsList" aria-live="polite">
+        <!-- Chat items dynamisch -->
+      </div>
 
-            <!-- Language Selection -->
-            <div class="mb-8 p-4 bg-gray-800 rounded-xl shadow-inner">
-                <h3 id="language-header" class="text-lg font-semibold mb-4 border-b border-gray-700 pb-2">Sprache</h3>
-                <div class="flex justify-around space-x-3">
-                    <button class="lang-button p-2 rounded-lg transition duration-150" data-lang="de" onclick="setLanguage('de')">Deutsch</button>
-                    <button class="lang-button p-2 rounded-lg transition duration-150" data-lang="en" onclick="setLanguage('en')">English</button>
-                </div>
-            </div>
+      <div class="sidebar-footer">
+        <small id="userGreeting">Willkommen</small>
+      </div>
+    </aside>
 
-            <!-- Theme Selection -->
-            <div class="mb-8 p-4 bg-gray-800 rounded-xl shadow-inner">
-                <h3 id="theme-header" class="text-lg font-semibold mb-4 border-b border-gray-700 pb-2">Farbthema</h3>
-                <div class="flex justify-around space-x-3">
-                    <div id="swatch-blue" class="theme-swatch bg-blue-500" data-color="blue" onclick="setTheme('blue')"></div>
-                    <div id="swatch-red" class="theme-swatch bg-red-500" data-color="red" onclick="setTheme('red')"></div>
-                    <div id="swatch-purple" class="theme-swatch bg-purple-500" data-color="purple" onclick="setTheme('purple')"></div>
-                    <div id="swatch-yellow" class="theme-swatch bg-amber-500" data-color="yellow" onclick="setTheme('yellow')"></div>
-                </div>
-            </div>
-
-            <!-- User Data Collection -->
-            <div class="p-4 bg-gray-800 rounded-xl shadow-inner">
-                <h3 id="data-header" class="text-lg font-semibold mb-4 border-b border-gray-700 pb-2">Deine Daten (Gesammelter Kontext)</h3>
-                <dl id="user-data-list" class="data-list space-y-2 text-sm">
-                    <p id="no-data-text" class="italic"></p>
-                </dl>
-            </div>
-
+    <!-- Hauptbereich -->
+    <main class="main" role="main">
+      <header class="main-header">
+        <h1 id="chatTitle">BilalToday</h1>
+        <div class="header-right">
+          <button id="settingsBtn" class="icon-btn" title="Einstellungen">⚙️</button>
         </div>
+      </header>
+
+      <section class="chat-window" id="chatWindow" aria-live="polite">
+        <!-- Nachrichten -->
+      </section>
+
+      <footer class="composer" role="region" aria-label="Eingabe">
+        <div class="composer-left">
+          <input id="messageInput" type="text" placeholder="Schreibe eine Nachricht..." aria-label="Nachricht" />
+        </div>
+        <button id="sendBtn" class="send-btn" title="Senden" aria-label="Senden">
+          <span class="paper-plane" id="plane">✈️</span>
+        </button>
+      </footer>
+
+      <div class="status-bar">
+        <small id="serverStatus">BilalToday Server verbindet...</small>
+      </div>
+    </main>
+
+    <!-- Einstellungen Modal -->
+    <div id="settingsModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+      <div class="modal-card">
+        <header class="modal-header">
+          <h2 id="settingsTitle">Einstellungen</h2>
+          <button id="closeSettings" class="close" title="Schließen">✖</button>
+        </header>
+
+        <div class="modal-body">
+          <label>
+            1. Name ändern
+            <input id="settingsName" type="text" />
+            <div style="display:flex; gap:.5rem; margin-top:6px;">
+              <button id="saveName" class="btn small">Speichern</button>
+            </div>
+          </label>
+
+          <label>
+            2. Theme wählen
+            <select id="themeSelect">
+              <option value="dark">Dark</option>
+              <option value="light">Light</option>
+              <option value="purple">Purple</option>
+              <option value="ocean">Ocean Blue</option>
+            </select>
+            <button id="saveTheme" class="btn small">Speichern</button>
+          </label>
+
+          <label>
+            3. Modell auswählen
+            <select id="modelSelect">
+              <option value="mini">BilalToday Mini</option>
+              <option value="pro">BilalToday Pro</option>
+              <option value="nano">BilalToday Nano</option>
+            </select>
+            <button id="saveModel" class="btn small">Auswählen</button>
+          </label>
+
+          <label>
+            4. BilalToday.com
+            <a href="https://bilaltoday.com" target="_blank" rel="noopener">Zur Seite</a>
+          </label>
+
+          <label>
+            5. Über die App
+            <p class="muted">BilalToday Chatbot — Clientseitige Demo mit Offline-Fallbacks. Version unten.</p>
+          </label>
+
+          <label>
+            6. Versionsnummer
+            <p class="muted">v1.1.0</p>
+          </label>
+        </div>
+      </div>
     </div>
 
-    <script type="module">
-        // --- API Konfiguration für BLOOMZ (Gemini 2.5 Flash mit Grounding) ---
-        const apiKey = ""; // Canvas stellt den API Key automatisch bereit
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
-        const systemPrompt = `Du bist ein freundlicher und hilfsbereiter KI-Assistent. Dein Name ist BilalToday Assistent. Beantworte Fragen kurz und prägnant. Du hast bereits Kontextinformationen über den Benutzer (Name, Ort, Hobbys, etc.) gespeichert; verwende diese, um deine Antworten persönlicher zu gestalten. Wenn die Frage nach aktuellen oder allgemeinen Informationen verlangt, nutze das Google Search Tool. Antworte immer auf Deutsch, es sei denn, der Benutzer bittet ausdrücklich um eine andere Sprache.`;
+    <!-- Erst-Start Popup -->
+    <div id="welcomePopup" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="welcomeTitle">
+      <div class="modal-card">
+        <h2 id="welcomeTitle">Willkommen beim BilalToday Chatbot!</h2>
+        <p>Wie heißt du?</p>
+        <input id="welcomeName" type="text" placeholder="Dein Name" />
+        <div style="text-align:right; margin-top:10px;">
+          <button id="welcomeContinue" class="btn">Weiter</button>
+        </div>
+      </div>
+    </div>
 
+    <!-- Modell Aktivierung Popup -->
+    <div id="modelPopup" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modelTitle">
+      <div class="modal-card">
+        <h3 id="modelTitle">Kundennummer erforderlich</h3>
+        <p>Bitte gib deine gültige BilalToday-Kundennummer ein.</p>
+        <input id="customerNumber" type="text" placeholder="Kundennummer" />
+        <div style="display:flex; gap:.5rem; justify-content:flex-end; margin-top:12px;">
+          <button id="cancelModel" class="btn small">Abbrechen</button>
+          <button id="confirmModel" class="btn small">Bestätigen</button>
+        </div>
+        <p id="modelError" class="error small hidden">Ungültige Nummer</p>
+      </div>
+    </div>
 
-        // --- Globale Zustände und Einstellungs-Konstanten ---
-        const SETTINGS_KEY = 'bilalTodayAI_settings_v2';
-        const CHAT_HISTORY_KEY = 'bilalTodayAI_chatHistory_v2';
+    <!-- Templates -->
+    <template id="chatItemTpl">
+      <div class="chat-item">
+        <div class="chat-item-title"></div>
+        <div class="chat-item-meta"></div>
+      </div>
+    </template>
 
-        // Globale UI-Zustände
-        let currentLanguage = 'de';
-        let currentTheme = 'blue';
-        let userData = {}; // z.B. { name: "Bilal", location: "Köln" }
-        let currentChatId = null;
-        let chatStorage = { 
-            chats: [], // [{ id: 'uuid', title: '...', lastUpdated: '...' }]
-            messages: {} // { 'uuid': [{ role: 'user', text: '...' }, ...] }
-        };
+    <template id="messageTpl">
+      <div class="message">
+        <div class="message-inner"></div>
+      </div>
+    </template>
+  </div>
 
-        // Übersetzungen
-        const translations = {
-            de: {
-                title: "BilalToday KI-Assistent",
-                welcome: "Herzlich willkommen. Wie kann ich dir helfen?",
-                placeholder: "Nachricht eingeben...",
-                loading: "Antwort wird generiert",
-                defaultChatTitle: "Neues Gespräch",
-                // Settings
-                settingsTitle: "Einstellungen",
-                languageHeader: "Sprache",
-                themeHeader: "Farbthema",
-                dataHeader: "Deine Daten (Gesammelter Kontext)",
-                noData: "Noch keine Daten über dich gesammelt. Erzähl mir von dir!",
-                newChat: "Neuer Chat",
-                settings: "Einstellungen",
-                namePromptTitle: "Hallo!", 
-                namePromptSubtitle: "Wie heißt du?", 
-                namePromptButton: "Weiter"
-            },
-            en: {
-                title: "BilalToday AI Assistant",
-                welcome: "Welcome. How can I help you?",
-                placeholder: "Enter message...",
-                loading: "Generating response",
-                defaultChatTitle: "New Conversation",
-                // Settings
-                settingsTitle: "Settings",
-                languageHeader: "Language",
-                themeHeader: "Color Theme",
-                dataHeader: "Your Data (Collected Context)",
-                noData: "No data collected about you yet. Tell me about yourself!",
-                newChat: "New Chat",
-                settings: "Settings",
-                namePromptTitle: "Hello!",
-                namePromptSubtitle: "What's your name?",
-                namePromptButton: "Continue"
-            }
-        };
-        
-        // --- Interne Q&A-Datenbank (BilalToday & Smalltalk) ---
-        const QA_DATA = {
-            // BilalToday (Priorität 2)
-            "bilaltoday": {
-                de: "BilalToday ist ein Projekt von Bilal, gestartet 2020. Es umfasst eine Website (bilaltoday.com), eine App, ein Spiel, über 40 Tools (wie Hintergrundentferner) und soziale Funktionen wie Posts, Kommentare und Chats. Ich bin ein Teil davon!",
-                en: "BilalToday is a project by Bilal, started in 2020. It includes a website (bilaltoday.com), an app, a game, over 40 tools (like background removers), and social features like posts, comments, and chats. I am part of it!"
-            },
-            "app": {
-                de: "Die BilalToday App bietet Zugriff auf alle Tools, Posts und Chat-Funktionen, die du auch auf der Website findest.",
-                en: "The BilalToday app provides access to all the tools, posts, and chat features that you also find on the website."
-            },
-            "spiel": {
-                de: "Das BilalToday Spiel ist ein spannendes Projekt, das Unterhaltung und Interaktion bietet.",
-                en: "The BilalToday game is an exciting project offering entertainment and interaction."
-            },
-        };
-
-        // --- UI-Element Referenzen ---
-        const chatHistoryEl = document.getElementById('chat-history');
-        const userInputEl = document.getElementById('user-input');
-        const loadingIndicatorEl = document.getElementById('loading-indicator');
-        const sendButtonEl = document.getElementById('send-button');
-        const bodyEl = document.body;
-        const settingsOverlayEl = document.getElementById('settings-overlay');
-        const userDataListEl = document.getElementById('user-data-list');
-        const namePromptModalEl = document.getElementById('name-prompt-modal');
-        const nameInputEl = document.getElementById('name-input');
-        const sidebarEl = document.getElementById('sidebar');
-        const sidebarBackdropEl = document.getElementById('sidebar-backdrop');
-        const chatListEl = document.getElementById('chat-list');
-        const submitNameButton = document.getElementById('submit-name-button');
-        const initialMessageEl = document.getElementById('initial-message'); 
-
-        // --- UI Aktualisierungsfunktionen ---
-
-        function updateUITexts() {
-            const t = translations[currentLanguage];
-            document.getElementById('app-title').textContent = t.title;
-            userInputEl.placeholder = t.placeholder;
-            document.getElementById('loading-text').textContent = t.loading;
-            document.getElementById('settings-title').textContent = t.settingsTitle;
-            document.getElementById('language-header').textContent = t.languageHeader;
-            document.getElementById('theme-header').textContent = t.themeHeader;
-            document.getElementById('data-header').textContent = t.dataHeader;
-            document.getElementById('name-prompt-title').textContent = t.namePromptTitle;
-            document.getElementById('name-prompt-subtitle').textContent = t.namePromptSubtitle;
-            submitNameButton.textContent = t.namePromptButton;
-            document.getElementById('new-chat-btn-text').textContent = t.newChat;
-            document.getElementById('settings-btn-text').textContent = t.settings;
-
-            // Sprache-Buttons
-            document.querySelectorAll('.lang-button').forEach(btn => {
-                const lang = btn.dataset.lang;
-                btn.textContent = lang === 'de' ? 'Deutsch' : 'English';
-                btn.classList.toggle('selected', lang === currentLanguage);
-            });
-            renderUserDataList();
-            renderChatList();
-        }
-        
-        window.toggleSidebar = function() {
-            sidebarEl.classList.toggle('open');
-            sidebarBackdropEl.classList.toggle('hidden');
-        }
-
-        // --- localStorage Persistenz-Logik ---
-
-        function loadSettings() {
-            try {
-                const settings = JSON.parse(localStorage.getItem(SETTINGS_KEY));
-                if (settings) {
-                    currentLanguage = settings.language || 'de';
-                    currentTheme = settings.theme || 'blue';
-                    userData = settings.userData || {};
-                }
-            } catch (e) {
-                console.error("Fehler beim Laden der Einstellungen:", e);
-                // Bei Fehler, lösche alte Daten, um Neustart zu ermöglichen
-                localStorage.removeItem(SETTINGS_KEY);
-            }
-        }
-
-        function saveSettings() {
-            try {
-                const settings = {
-                    language: currentLanguage,
-                    theme: currentTheme,
-                    userData: userData
-                };
-                localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
-            } catch (e) {
-                console.error("Fehler beim Speichern der Einstellungen:", e);
-            }
-        }
-        
-        function loadChatHistoryFromStorage() {
-             try {
-                const history = JSON.parse(localStorage.getItem(CHAT_HISTORY_KEY));
-                if (history && history.chats && history.messages) {
-                    chatStorage = history;
-                }
-             } catch (e) {
-                console.error("Fehler beim Laden des Chat-Verlaufs:", e);
-                localStorage.removeItem(CHAT_HISTORY_KEY);
-             }
-        }
-        
-        function saveChatHistoryToStorage() {
-            try {
-                localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(chatStorage));
-            } catch (e) {
-                console.error("Fehler beim Speichern des Chat-Verlaufs:", e);
-            }
-        }
-        
-        // --- App Initialisierung ---
-
-        function initApp() {
-            loadSettings();
-            loadChatHistoryFromStorage();
-            
-            bodyEl.className = `theme-${currentTheme}`;
-            updateThemeSwatches(currentTheme);
-            updateUITexts();
-
-            // LOGIK: Wenn Name bekannt, Chat laden. Sonst Name Prompt anzeigen.
-            if (userData.name) {
-                namePromptModalEl.classList.add('hidden');
-                initialMessageEl.classList.add('hidden'); 
-                loadChatIndex(); 
-            } else {
-                // Name-Pop-up sofort anzeigen, da Name fehlt
-                namePromptModalEl.classList.remove('hidden');
-                nameInputEl.focus();
-                // Lade-Placeholder bleibt, bis Name eingegeben wird
-            }
-        }
-
-        function submitName() {
-            const name = nameInputEl.value.trim();
-            if (name) {
-                userData.name = name;
-                saveSettings();
-                namePromptModalEl.classList.add('hidden');
-                initialMessageEl.classList.add('hidden'); 
-                
-                // Ersten Chat starten (oder vorhandenen laden)
-                loadChatIndex(true); 
-            }
-        }
-        
-        // --- Multi-Chat Logik ---
-
-        function loadChatIndex(forceNew = false) {
-            chatStorage.chats.sort((a, b) => new Date(b.lastUpdated) - new Date(a.lastUpdated));
-            
-            renderChatList();
-            
-            if (chatStorage.chats.length === 0 || forceNew) {
-                startNewChat();
-            } else {
-                // Lade den neuesten Chat
-                loadChat(chatStorage.chats[0].id);
-            }
-        }
-        
-        function renderChatList() {
-            chatListEl.innerHTML = '';
-            const t = translations[currentLanguage];
-            
-            const sortedChats = [...chatStorage.chats].sort((a, b) => new Date(b.lastUpdated) - new Date(a.lastUpdated));
-            
-            sortedChats.forEach(chat => {
-                const item = document.createElement('div');
-                item.className = `chat-list-item text-gray-300`;
-                item.textContent = chat.title || t.defaultChatTitle;
-                item.onclick = (e) => {
-                    e.stopPropagation();
-                    loadChat(chat.id);
-                };
-                if (chat.id === currentChatId) {
-                    item.classList.add('active');
-                }
-                chatListEl.appendChild(item);
-            });
-        }
-        
-        window.startNewChat = function() {
-            const t = translations[currentLanguage];
-            const newChatId = crypto.randomUUID();
-            
-            // Feste Begrüßungsnachricht
-            const welcomeMessage = {
-                role: 'assistant',
-                text: t.welcome, 
-                timestamp: new Date().toISOString()
-            };
-            
-            const newChatIndex = {
-                id: newChatId,
-                title: t.defaultChatTitle,
-                lastUpdated: new Date().toISOString(),
-                titleSet: false 
-            };
-            
-            // Füge neuen Chat am Anfang hinzu
-            chatStorage.chats.unshift(newChatIndex);
-            chatStorage.messages[newChatId] = [welcomeMessage];
-            
-            saveChatHistoryToStorage();
-            loadChat(newChatId); 
-            
-            if (window.innerWidth < 768) toggleSidebar(); 
-        }
-        
-        window.loadChat = function(chatId) {
-            if (!chatId || !chatStorage.messages[chatId]) {
-                console.error("Fehler: Kann Chat-ID oder Nachrichten nicht laden.");
-                return;
-            }
-
-            if (currentChatId === chatId && window.innerWidth < 768) {
-                 toggleSidebar();
-                 return; 
-            }
-
-            currentChatId = chatId;
-            
-            const messages = chatStorage.messages[chatId];
-            renderChatHistory(messages); // Nachrichten anzeigen
-            renderChatList(); // Sidebar-Highlight aktualisieren
-            
-            if (window.innerWidth < 768) toggleSidebar(); 
-        }
-        
-        function addMessageToCurrentChat(role, text) {
-             if (!currentChatId) {
-                 console.warn("CRITICAL ERROR: currentChatId ist null. Starte neuen Chat als Fallback.");
-                 startNewChat();
-                 if (!currentChatId) return; 
-             }
-             
-             const message = {
-                 role: role,
-                 text: text,
-                 timestamp: new Date().toISOString()
-             };
-             
-             if (!chatStorage.messages[currentChatId]) {
-                 chatStorage.messages[currentChatId] = [];
-             }
-             chatStorage.messages[currentChatId].push(message);
-             
-             const chatIndex = chatStorage.chats.find(c => c.id === currentChatId);
-             if (chatIndex) {
-                 chatIndex.lastUpdated = new Date().toISOString();
-                 
-                 // Titel nur nach der ersten User-Nachricht setzen
-                 if (role === 'user' && chatStorage.messages[currentChatId].length === 2 && !chatIndex.titleSet) {
-                     chatIndex.title = text.substring(0, 30) + (text.length > 30 ? '...' : '');
-                     chatIndex.titleSet = true; 
-                 }
-             }
-             
-             // Update the chat list order
-             chatStorage.chats.sort((a, b) => new Date(b.lastUpdated) - new Date(a.lastUpdated));
-             
-             saveChatHistoryToStorage();
-             renderChatBubble(message);
-             userInputEl.focus();
-         }
-
-        // --- API-Router (Das Gehirn) ---
-
-        // 1. Wetter-API (Open-Meteo)
-        async function fetchWeather(location) {
-            // Logik unverändert
-            try {
-                const cleanLocation = location.split(',')[0].trim();
-                const geoUrl = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(cleanLocation)}&count=1&language=${currentLanguage}`;
-                const geoRes = await fetch(geoUrl);
-                const geoData = await geoRes.json();
-                
-                if (!geoData.results || geoData.results.length === 0) {
-                    return currentLanguage === 'de' ? `Ich konnte die Stadt "${location}" nicht finden. (Open-Meteo)` : `I could not find the city "${location}". (Open-Meteo)`;
-                }
-                
-                const { name, latitude, longitude } = geoData.results[0];
-                
-                const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true`;
-                const weatherRes = await fetch(weatherUrl);
-                const weatherData = await weatherRes.json();
-                
-                const temp = weatherData.current_weather.temperature;
-                return currentLanguage === 'de' ?
-                    `Das aktuelle Wetter in **${name}** ist **${temp}°C**.` :
-                    `The current weather in **${name}** is **${temp}°C**.`;
-
-            } catch (error) {
-                console.error("Wetter-API-Fehler:", error);
-                return currentLanguage === 'de' ? "Entschuldigung, das Wetter konnte nicht abgerufen werden." : "Sorry, I could not fetch the weather.";
-            }
-        }
-
-        // 2. Wikipedia-API
-        async function fetchWikipedia(term) {
-            // Logik unverändert
-            try {
-                const url = `https://${currentLanguage}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(term)}`;
-                const res = await fetch(url);
-                
-                if (res.status === 404) {
-                    return currentLanguage === 'de' ? `Ich konnte bei Wikipedia nichts zu "${term}" finden.` : `I couldn't find anything on Wikipedia for "${term}".`;
-                }
-                
-                const data = await res.json();
-                return data.extract ? data.extract : (currentLanguage === 'de' ? "Keine Zusammenfassung gefunden." : "No summary found.");
-
-            } catch (error) {
-                console.error("Wikipedia-API-Fehler:", error);
-                return currentLanguage === 'de' ? "Entschuldigung, Wikipedia konnte nicht erreicht werden." : "Sorry, I could not reach Wikipedia.";
-            }
-        }
-        
-        // 3. Numbers API
-        async function fetchNumberFact(number) {
-            // Logik unverändert
-            try {
-                const url = `http://numbersapi.com/${encodeURIComponent(number)}/trivia?default=...`; 
-                const res = await fetch(url);
-                const text = await res.text();
-                return text === "..." ? (currentLanguage === 'de' ? `Kein Fakt für "${number}" gefunden.` : `No fact found for "${number}".`) : text;
-            } catch (error) {
-                console.error("Numbers-API-Fehler:", error);
-                return currentLanguage === 'de' ? "Entschuldigung, die Zahlen-Fakten konnten nicht erreicht werden." : "Sorry, I could not reach the number facts.";
-            }
-        }
-
-        // 4. BLOOMZ/Gemini API (Für generelle Fragen)
-        async function processBloomzQuery(userText) {
-            const contextMessages = chatStorage.messages[currentChatId] || [];
-            
-            // Füge Kontext über den Benutzer hinzu
-            let userContext = `Der Benutzername ist ${userData.name || 'unbekannt'}.`;
-            if (userData.location) userContext += ` Der gespeicherte Ort ist ${userData.location}.`;
-            if (userData.hobby) userContext += ` Das gespeicherte Hobby ist ${userData.hobby}.`;
-            
-            // Bauen Sie den Chat-Verlauf auf (ohne System-Nachrichten)
-            const contents = contextMessages
-                .filter(msg => msg.role !== 'system')
-                .map(msg => ({ 
-                    role: msg.role === 'assistant' ? 'model' : 'user', 
-                    parts: [{ text: msg.text }] 
-                }));
-
-            // Fügen Sie die aktuelle Benutzeranfrage und den Kontext hinzu
-            contents.push({ role: 'user', parts: [{ text: `Kontext: ${userContext}. Aktuelle Anfrage: ${userText}` }] });
-
-            const payload = {
-                contents: contents,
-                tools: [{ "google_search": {} }], 
-                systemInstruction: {
-                    parts: [{ text: systemPrompt }]
-                },
-            };
-
-            try {
-                for (let i = 0; i < 3; i++) { 
-                    const response = await fetch(apiUrl, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
-
-                    if (response.ok) {
-                        const result = await response.json();
-                        const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
-
-                        if (text) return text;
-                        
-                        return currentLanguage === 'de' ? "Entschuldigung, die KI konnte keine Textantwort generieren." : "Sorry, the AI did not generate a text response.";
-
-                    } else if (response.status === 429 && i < 2) {
-                        // Exponential Backoff bei Rate Limit
-                        await new Promise(resolve => setTimeout(resolve, Math.pow(2, i) * 1000));
-                        continue;
-                    } else {
-                        const errorBody = await response.text();
-                        throw new Error(`API Fehler (${response.status}): ${errorBody}`);
-                    }
-                }
-                return currentLanguage === 'de' ? "Die KI-Anfrage ist fehlgeschlagen. Bitte versuche es später noch einmal." : "The AI request failed. Please try again later.";
-            } catch (error) {
-                console.error("BLOOMZ/Gemini API Fehler:", error);
-                return currentLanguage === 'de' ? 
-                    `Entschuldigung, es gab einen schwerwiegenden Fehler bei der KI-Anfrage (BLOOMZ): ${error.message}` : 
-                    `Sorry, there was a serious error with the AI request (BLOOMZ): ${error.message}`;
-            }
-        }
-        
-        // --- Das Gehirn: getAIResponse ---
-        
-        async function getAIResponse(userText) {
-            const query = userText.toLowerCase().trim();
-            let updates = {};
-            let responseText = "";
-
-            // 1. Priorität: Datensammlung & Kontext-Fragen
-            let match;
-            
-            // a) Ort speichern
-            if (query.match(/(?:ich wohne in|ich lebe in|komme aus) ([\w\säöüß\.-]+)/i)) {
-                match = query.match(/(?:ich wohne in|ich lebe in|komme aus) ([\w\säöüß\.-]+)/i);
-                const newLocation = match[1].split(/[\s,]+/).filter(Boolean)[0]; 
-                if (newLocation) {
-                    updates.location = newLocation.trim();
-                    responseText = currentLanguage === 'de' ? `Ah, **${updates.location}**! Das merke ich mir für zukünftige Wetterfragen.` : `Ah, **${updates.location}**! I'll remember that for future weather inquiries.`;
-                    return { text: responseText, data: updates };
-                }
-            }
-            
-            // b) Hobby speichern
-            if (query.match(/(?:mein hobby ist|ich mag|ich interessiere mich für) ([\w\säöüß-]+)/i)) {
-                match = query.match(/(?:mein hobby ist|ich mag|ich interessiere mich für) ([\w\säöüß-]+)/i);
-                updates.hobby = match[1];
-                responseText = currentLanguage === 'de' ? `Interessant! ${match[1]} ist ein tolles Hobby.` : `Interesting! ${match[1]} is a great hobby.`;
-                return { text: responseText, data: updates };
-            }
-            
-            // c) Wer bin ich?
-            if (query.includes("wer bin ich")) {
-                const name = userData.name;
-                responseText = name ?
-                    (currentLanguage === 'de' ? `Du bist **${name}**. Dein gespeicherter Ort ist ${userData.location || 'unbekannt'}.` : `You are **${name}**. Your stored location is ${userData.location || 'unknown'}.`) :
-                    (currentLanguage === 'de' ? "Du hast mir deinen Namen noch nicht gesagt." : "You haven't told me your name yet.");
-                return { text: responseText, data: updates };
-            }
-
-            // 2. Priorität: Interne Q&A-Datenbank (BilalToday)
-            const qaKey = Object.keys(QA_DATA).find(k => query.includes(k.toLowerCase()));
-            if (qaKey) {
-                responseText = QA_DATA[qaKey][currentLanguage];
-                return { text: responseText, data: updates };
-            }
-
-            // 3. Priorität: API-Trigger (Wetter) - Fix für gespeicherte Stadt
-            if (query.includes("wetter") || query.includes("temperatur")) {
-                let location = userData.location;
-                const matchQuery = query.match(/(?:wetter in|temperatur in|wetter von) ([\w\säöüß\.-]+)/i);
-                
-                if (matchQuery) {
-                    location = matchQuery[1].trim();
-                    updates.location = location; 
-                }
-                
-                if (location) {
-                    responseText = await fetchWeather(location);
-                } else {
-                    responseText = currentLanguage === 'de' ? "Gerne, für welche Stadt? (Du kannst sagen 'Ich wohne in [Stadt]', dann merke ich es mir für später.)" : "Sure, for which city? (You can say 'I live in [City]' and I'll remember it for later.)";
-                }
-                return { text: responseText, data: updates };
-            }
-
-            // 4. Priorität: API-Trigger (Wikipedia/Numbers)
-            
-            // a) Numbers
-            match = query.match(/(?:fakt über|fakt zu|was ist) (\d+)/i);
-            if (match) {
-                responseText = await fetchNumberFact(match[1]);
-                return { text: responseText, data: updates };
-            }
-            
-            // b) Wikipedia
-            if (query.startsWith("was ist") || query.startsWith("wer ist") || query.startsWith("tell me about") || query.startsWith("erkläre mir")) {
-                const term = userText.replace(/^(was ist|wer ist|tell me about|erkläre mir)\s*/i, '', '').trim();
-                if (term) responseText = await fetchWikipedia(term);
-                else responseText = currentLanguage === 'de' ? "Was genau soll ich nachschlagen?" : "What exactly should I look up?";
-                return { text: responseText, data: updates };
-            }
-
-            // 5. Fallback: BLOOMZ (General LLM Intelligence)
-            responseText = await processBloomzQuery(userText);
-            return { text: responseText, data: updates };
-        }
-
-        // --- SENDEMETHODE ---
-
-        window.sendMessage = async function() {
-            const userText = userInputEl.value.trim();
-            if (!userText) return;
-            
-            if (!currentChatId) {
-                console.warn("Senden blockiert: currentChatId fehlt. Versuch, neuen Chat zu starten.");
-                startNewChat(); 
-                if (!currentChatId) return;
-            }
-
-            const localUserText = userText;
-            userInputEl.value = '';
-            
-            userInputEl.disabled = true;
-            sendButtonEl.disabled = true;
-            loadingIndicatorEl.classList.remove('hidden');
-            
-            addMessageToCurrentChat('user', localUserText);
-
-            try {
-                const response = await getAIResponse(localUserText);
-                const aiText = response.text;
-                const update = response.data;
-
-                if (update && Object.keys(update).length > 0) {
-                    userData = { ...userData, ...update };
-                    saveSettings(); 
-                    renderUserDataList(); 
-                }
-
-                addMessageToCurrentChat('assistant', aiText);
-
-            } catch (error) {
-                console.error("Fehler bei der API-Anfrage:", error);
-                addMessageToCurrentChat('assistant', `Entschuldigung, es gab einen Fehler bei der KI-Anfrage: ${error.message}`);
-            } finally {
-                userInputEl.disabled = false;
-                sendButtonEl.disabled = false;
-                loadingIndicatorEl.classList.add('hidden');
-                userInputEl.focus();
-            }
-        }
-
-        // --- UI Rendering ---
-
-        function renderChatBubble(msg) {
-            const bubble = document.createElement('div');
-            bubble.classList.add('bubble', 'max-w-full', 'break-words');
-            
-            if (msg.role === 'user') {
-                bubble.classList.add('user-bubble', 'self-end', 'ml-auto');
-            } else {
-                bubble.classList.add('ai-bubble', 'self-start', 'mr-auto');
-            }
-
-            let formattedText = msg.text
-                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                .replace(/\*(.*?)\*/g, '<em>$1</em>');
-                
-            bubble.innerHTML = formattedText;
-            chatHistoryEl.appendChild(bubble);
-            chatHistoryEl.scrollTop = chatHistoryEl.scrollHeight;
-        }
-
-        function renderChatHistory(messages) {
-            chatHistoryEl.innerHTML = ''; 
-            // Verstecke den Placeholder, sobald echte Nachrichten da sind
-            initialMessageEl.classList.add('hidden'); 
-            if (!messages || messages.length === 0) return;
-            messages.forEach(renderChatBubble);
-            chatHistoryEl.scrollTop = chatHistoryEl.scrollHeight;
-        }
-        
-        function renderUserDataList() {
-            userDataListEl.innerHTML = '';
-            const t = translations[currentLanguage];
-            
-            const dataKeys = Object.keys(userData);
-            let hasData = false;
-
-            const keyMap = {
-                name: { de: "Name", en: "Name" },
-                hobby: { de: "Hobby", en: "Hobby" },
-                location: { de: "Ort für Wetter", en: "Location for Weather" },
-            };
-
-            dataKeys.forEach(key => {
-                const value = userData[key];
-                if (value !== null && value !== undefined && String(value).trim() !== '') {
-                    hasData = true;
-                    const dt = document.createElement('dt');
-                    const label = keyMap[key] ? keyMap[key][currentLanguage] : key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ');
-
-                    dt.classList.add('font-semibold', 'text-blue-400');
-                    dt.textContent = `${label}:`;
-                    const dd = document.createElement('dd');
-                    dd.textContent = value;
-                    dd.classList.add('ml-2', 'text-gray-300', 'mb-2');
-                    
-                    userDataListEl.appendChild(dt);
-                    userDataListEl.appendChild(dd);
-                }
-            });
-
-            const noDataEl = document.getElementById('no-data-text');
-            // Fehlerbehebung: Prüfen Sie das Element, bevor Sie darauf zugreifen
-            if (noDataEl) {
-                noDataEl.textContent = hasData ? '' : t.noData;
-                noDataEl.style.display = hasData ? 'none' : 'block';
-            }
-        }
-        
-        function updateThemeSwatches(selectedColor) {
-            document.querySelectorAll('.theme-swatch').forEach(swatch => {
-                swatch.classList.toggle('selected', swatch.dataset.color === selectedColor);
-            });
-        }
-
-        // --- Globale Event Handler ---
-        
-        window.setTheme = function(color) {
-            currentTheme = color;
-            bodyEl.className = `theme-${color}`;
-            updateThemeSwatches(color);
-            saveSettings();
-        }
-        
-        window.setLanguage = function(lang) {
-            currentLanguage = lang;
-            saveSettings();
-            updateUITexts();
-        }
-
-        document.getElementById('settings-button').addEventListener('click', () => settingsOverlayEl.classList.remove('hidden'));
-        document.getElementById('close-settings').addEventListener('click', () => settingsOverlayEl.classList.add('hidden'));
-        submitNameButton.addEventListener('click', submitName);
-        nameInputEl.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') submitName();
-        });
-        userInputEl.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                sendMessage();
-            }
-        });
-        
-        // --- Start der Anwendung ---
-        initApp();
-        
-    </script>
+  <script src="script.js" defer></script>
 </body>
 </html>
