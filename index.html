@@ -1,0 +1,988 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Chat-Story | BilalToday.com</title>
+    <style>
+        /* === FARBEN & THEME (Modern WhatsApp Dark Mode / iOS Style) === */
+        :root {
+            --bg-main: #000000;
+            --bg-header: rgba(30, 30, 30, 0.85);
+            --bg-chat: #0b141a;
+            --text-primary: #ffffff;
+            --text-secondary: #8696a0;
+            --accent: #25D366; /* WhatsApp Green */
+            --accent-dark: #128C7E;
+            --bubble-in: #202c33;
+            --bubble-out: #005c4b;
+            --border: #222d34;
+            --danger: #ff3b30;
+            --blue-tick: #53bdeb;
+        }
+
+        /* === RESET & BASIS === */
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; -webkit-tap-highlight-color: transparent; }
+        body { background-color: #111; display: flex; justify-content: center; align-items: center; height: 100vh; height: 100dvh; overflow: hidden; color: var(--text-primary); }
+        
+        #app { width: 100%; max-width: 450px; height: 100%; background-color: var(--bg-main); position: relative; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 0 30px rgba(0,0,0,0.8); }
+        button { border: none; background: none; cursor: pointer; color: inherit; font-size: inherit; outline: none; }
+        .hidden { display: none !important; }
+
+        /* === BILALTODAY.COM SPLASH SCREEN === */
+        #splash-screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: #000; z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; transition: opacity 0.8s ease; }
+        .splash-logo { font-size: 28px; font-weight: 800; letter-spacing: 1px; color: #fff; margin-bottom: 10px; opacity: 0; animation: fadeIn 1s forwards 0.5s; }
+        .splash-logo span { color: var(--accent); }
+        .splash-sub { font-size: 14px; color: var(--text-secondary); opacity: 0; animation: fadeIn 1s forwards 1s; letter-spacing: 2px; text-transform: uppercase; }
+        @keyframes fadeIn { to { opacity: 1; } }
+
+        /* === HAUPTANSICHT (Tabs) === */
+        #main-view { display: flex; flex-direction: column; height: 100%; width: 100%; background: var(--bg-main); }
+        .header { background: var(--bg-header); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); padding: 15px 15px 0 15px; color: var(--text-secondary); display: flex; flex-direction: column; z-index: 10; border-bottom: 1px solid var(--border); }
+        .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .header-top h1 { color: var(--text-primary); font-size: 22px; font-weight: 600; }
+        
+        .tabs { display: flex; }
+        .tab { flex: 1; text-align: center; padding-bottom: 12px; font-weight: 500; cursor: pointer; color: var(--text-secondary); border-bottom: 3px solid transparent; transition: 0.2s; position: relative; font-size: 15px; }
+        .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+        .tab-badge { position: absolute; top: -5px; right: 15px; background-color: var(--accent); color: #000; font-size: 11px; font-weight: bold; border-radius: 10px; padding: 2px 6px; display: none; }
+        
+        .content-area { flex: 1; overflow-y: auto; background-color: var(--bg-main); position: relative; }
+        .content-section { display: none; animation: fadeTab 0.3s ease; }
+        .content-section.active { display: block; }
+        @keyframes fadeTab { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* === CHAT-LISTE === */
+        .chat-item { display: flex; align-items: center; padding: 12px 15px; cursor: pointer; transition: background 0.2s; }
+        .chat-item:active { background-color: rgba(255,255,255,0.05); }
+        .avatar { width: 52px; height: 52px; border-radius: 50%; background-color: #333; display: flex; justify-content: center; align-items: center; font-size: 24px; margin-right: 15px; flex-shrink: 0; overflow: hidden; position: relative; }
+        .avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .chat-info { flex: 1; border-bottom: 1px solid var(--border); padding-bottom: 12px; display: flex; flex-direction: column; justify-content: center; overflow: hidden; }
+        .chat-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+        .chat-name { font-weight: 500; font-size: 16px; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .chat-time { font-size: 12px; color: var(--text-secondary); flex-shrink: 0; }
+        .chat-preview { font-size: 14px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 85%; }
+        .unread-badge { background-color: var(--accent); color: #000; font-size: 12px; font-weight: bold; border-radius: 50%; min-width: 20px; height: 20px; padding: 0 6px; display: flex; justify-content: center; align-items: center; }
+        .typing-indicator-list { color: var(--accent); font-weight: 500; }
+
+        /* === CHAT-FENSTER === */
+        #chat-view { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: var(--bg-chat); display: flex; flex-direction: column; z-index: 50; transform: translateX(100%); transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); }
+        #chat-view.open { transform: translateX(0); }
+        
+        .chat-header { background: var(--bg-header); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); padding: 10px 5px; display: flex; align-items: center; border-bottom: 1px solid var(--border); z-index: 10; }
+        .back-btn { padding: 10px; display: flex; align-items: center; }
+        .back-btn svg { width: 22px; height: 22px; fill: var(--accent); }
+        .chat-header-info { display: flex; align-items: center; flex: 1; cursor: pointer; }
+        .chat-header .avatar { width: 38px; height: 38px; margin-right: 10px; margin-left: -5px; font-size: 18px; }
+        .chat-header-text { display: flex; flex-direction: column; }
+        .chat-header-name { font-weight: 600; font-size: 16px; }
+        .chat-header-status { font-size: 12px; color: var(--text-secondary); transition: color 0.3s; }
+        .status-typing { color: var(--accent) !important; }
+
+        /* Chat Hintergrund-Muster */
+        .chat-messages-container { flex: 1; overflow-y: auto; padding: 15px 4%; display: flex; flex-direction: column; position: relative; background-image: url('data:image/svg+xml;utf8,<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="none"/><path d="M20 20 c 5 -5, 15 -5, 20 0 c 5 5, 5 15, 0 20 c -5 5, -15 5, -20 0 c -5 -5, -5 -15, 0 -20 M60 60 c 5 -5, 15 -5, 20 0 c 5 5, 5 15, 0 20 c -5 5, -15 5, -20 0 c -5 -5, -5 -15, 0 -20" stroke="rgba(255,255,255,0.02)" stroke-width="2" fill="none"/></svg>'); scroll-behavior: smooth; }
+        
+        .message { max-width: 75%; padding: 8px 12px; margin-bottom: 4px; border-radius: 12px; font-size: 15px; position: relative; line-height: 1.4; word-wrap: break-word; animation: popIn 0.2s ease-out forwards; transform-origin: bottom; box-shadow: 0 1px 2px rgba(0,0,0,0.15); }
+        .message.first-in-group { margin-top: 10px; }
+        @keyframes popIn { 0% { opacity: 0; transform: scale(0.95) translateY(10px); } 100% { opacity: 1; transform: scale(1) translateY(0); } }
+        
+        .msg-in { background-color: var(--bubble-in); align-self: flex-start; border-top-left-radius: 4px; }
+        .msg-in.first-in-group { border-top-left-radius: 12px; }
+        
+        .msg-out { background-color: var(--bubble-out); align-self: flex-end; border-top-right-radius: 4px; }
+        .msg-out.first-in-group { border-top-right-radius: 12px; }
+        
+        .msg-time { font-size: 11px; color: rgba(255,255,255,0.55); float: right; margin-top: 5px; margin-left: 10px; display: flex; align-items: center; line-height: 1; }
+        .msg-time svg { width: 14px; height: 14px; margin-left: 4px; fill: var(--blue-tick); }
+
+        /* Typing Bubble */
+        .typing-bubble { display: flex; align-items: center; padding: 12px 16px; margin-bottom: 10px; margin-top: 10px; background-color: var(--bubble-in); align-self: flex-start; border-radius: 12px; border-top-left-radius: 4px; width: max-content; }
+        .dot { width: 6px; height: 6px; background-color: var(--text-secondary); border-radius: 50%; margin: 0 2px; animation: bounce 1.4s infinite ease-in-out both; }
+        .dot:nth-child(1) { animation-delay: -0.32s; }
+        .dot:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes bounce { 0%, 80%, 100% { transform: translateY(0); opacity: 0.5; } 40% { transform: translateY(-4px); opacity: 1; } }
+
+        /* Eingabebereich & Entscheidungen */
+        .chat-input-area { background: var(--bg-header); padding: 12px 10px; min-height: 70px; display: flex; align-items: center; justify-content: center; border-top: 1px solid var(--border); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); z-index: 10; }
+        .choices-container { display: flex; flex-direction: column; width: 100%; gap: 8px; }
+        .choice-btn { background-color: var(--bubble-out); color: var(--text-primary); padding: 12px 16px; border-radius: 18px; font-size: 15px; text-align: left; transition: opacity 0.2s; border: 1px solid rgba(255,255,255,0.05); box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .choice-btn:active { opacity: 0.7; transform: scale(0.98); }
+        .choice-empty { color: var(--text-secondary); font-style: italic; text-align: center; width: 100%; font-size: 14px; }
+
+        /* === STATUS ANSICHT === */
+        #status-section .avatar { border: 2.5px solid var(--accent); padding: 2px; background: transparent; }
+        #status-section .avatar img { border-radius: 50%; }
+        #status-section .avatar.viewed { border-color: var(--text-secondary); }
+        .status-header { padding: 15px 15px 5px 15px; font-weight: 600; color: var(--text-secondary); font-size: 14px; text-transform: uppercase; letter-spacing: 1px; }
+        
+        #status-viewer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: #000; z-index: 200; display: flex; flex-direction: column; transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); }
+        #status-viewer.open { transform: translateY(0); }
+        .status-progress-container { display: flex; gap: 4px; padding: 10px; position: absolute; top: 0; left: 0; width: 100%; z-index: 202; }
+        .status-progress-bar { flex: 1; height: 3px; background-color: rgba(255,255,255,0.3); border-radius: 2px; overflow: hidden; }
+        .status-progress-fill { width: 0%; height: 100%; background-color: #fff; }
+        .status-top-bar { position: absolute; top: 15px; left: 0; width: 100%; padding: 10px 15px; display: flex; align-items: center; z-index: 202; }
+        .status-top-bar .avatar { width: 40px; height: 40px; border: none; margin-right: 12px; padding: 0; }
+        .status-author { color: #fff; font-weight: 600; font-size: 16px; text-shadow: 0 1px 3px rgba(0,0,0,0.8); }
+        .status-time { color: rgba(255,255,255,0.8); font-size: 13px; text-shadow: 0 1px 3px rgba(0,0,0,0.8); }
+        .close-status-btn { margin-left: auto; color: #fff; font-size: 28px; text-shadow: 0 1px 3px rgba(0,0,0,0.8); }
+        .status-content { flex: 1; display: flex; justify-content: center; align-items: center; text-align: center; font-size: 26px; padding: 30px; color: #fff; background-size: cover; background-position: center; position: relative; font-weight: bold; }
+        .status-content::after { content: ''; position: absolute; top:0; left:0; right:0; bottom:0; background: linear-gradient(to bottom, rgba(0,0,0,0.5) 0%, transparent 20%, rgba(0,0,0,0.7) 100%); pointer-events: none; }
+        .status-text { z-index: 201; text-shadow: 0 2px 10px rgba(0,0,0,0.8); }
+
+        /* === CALL SCREEN === */
+        #call-screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #1a1a1a; z-index: 300; display: flex; flex-direction: column; align-items: center; padding-top: 80px; transform: translateY(-100%); transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        #call-screen.active { transform: translateY(0); }
+        .call-title { font-size: 16px; color: var(--text-secondary); margin-bottom: 10px; }
+        .call-name { font-size: 32px; font-weight: 300; margin-bottom: 40px; }
+        .call-avatar { width: 120px; height: 120px; border-radius: 50%; background: #333; font-size: 60px; display: flex; justify-content: center; align-items: center; margin-bottom: 60px; box-shadow: 0 0 40px rgba(0,0,0,0.5); animation: pulseCall 2s infinite; }
+        @keyframes pulseCall { 0% { box-shadow: 0 0 0 0 rgba(255,255,255,0.2); } 70% { box-shadow: 0 0 0 30px rgba(255,255,255,0); } 100% { box-shadow: 0 0 0 0 rgba(255,255,255,0); } }
+        .call-actions { display: flex; justify-content: space-around; width: 100%; padding: 0 40px; position: absolute; bottom: 80px; }
+        .call-btn { width: 70px; height: 70px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 30px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); transition: transform 0.2s; }
+        .call-btn:active { transform: scale(0.9); }
+        .btn-decline { background-color: var(--danger); }
+        .btn-accept { background-color: var(--accent); animation: shake 1.5s infinite; }
+        @keyframes shake { 0%, 100% { transform: rotate(0deg); } 25% { transform: rotate(-15deg); } 50% { transform: rotate(15deg); } 75% { transform: rotate(-15deg); } }
+        .call-status-text { font-size: 18px; color: var(--accent); margin-top: 20px; display: none; }
+
+        /* === ANRUFE TAB === */
+        .call-item { display: flex; align-items: center; padding: 12px 15px; border-bottom: 1px solid var(--border); }
+        .call-info-text { flex: 1; display: flex; flex-direction: column; justify-content: center; margin-left: 15px; }
+        .call-row-1 { font-size: 16px; font-weight: 500; color: var(--danger); }
+        .call-row-2 { font-size: 14px; color: var(--text-secondary); display: flex; align-items: center; margin-top: 4px; }
+        .call-row-2 svg { width: 14px; height: 14px; fill: var(--danger); margin-right: 5px; }
+
+        /* === FAKE NOTIFICATION === */
+        #notification { position: absolute; top: -100px; left: 5%; width: 90%; background-color: rgba(30, 30, 30, 0.95); backdrop-filter: blur(10px); border-radius: 14px; padding: 12px 15px; display: flex; align-items: center; z-index: 400; box-shadow: 0 10px 25px rgba(0,0,0,0.6); transition: top 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); border: 1px solid rgba(255,255,255,0.1); }
+        #notification.show { top: 20px; }
+        #notification .avatar { width: 42px; height: 42px; margin-right: 12px; }
+        .notif-text { flex: 1; overflow: hidden; }
+        .notif-title { font-weight: 600; font-size: 15px; margin-bottom: 2px; }
+        .notif-desc { font-size: 14px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        /* Tools & Footer */
+        .system-msg { align-self: center; background-color: var(--bg-header); color: var(--text-secondary); font-size: 12.5px; padding: 6px 14px; border-radius: 8px; margin-bottom: 15px; max-width: 90%; text-align: center; box-shadow: 0 1px 2px rgba(0,0,0,0.2); }
+        .branding-footer { text-align: center; padding: 20px; color: var(--text-secondary); font-size: 12px; opacity: 0.5; font-weight: 600; letter-spacing: 1px; }
+        .reset-btn-link { color: var(--danger); text-decoration: underline; margin-top: 10px; display: inline-block; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<div id="app">
+    <!-- BilalToday Splash Screen -->
+    <div id="splash-screen">
+        <div class="splash-logo">BILAL<span>TODAY</span></div>
+        <div class="splash-sub">Interactive Stories</div>
+    </div>
+
+    <!-- Eingehender Anruf Screen -->
+    <div id="call-screen">
+        <div class="call-title">WhatsApp Audio...</div>
+        <div class="call-avatar" id="call-screen-avatar">⬛</div>
+        <div class="call-name" id="call-screen-name">Unbekannt</div>
+        <div class="call-status-text" id="call-status-text">Verbinden...</div>
+        <div class="call-actions" id="call-actions">
+            <button class="call-btn btn-decline" onclick="handleCall(false)">
+                <svg width="30" height="30" viewBox="0 0 24 24" fill="#fff"><path d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08c-.18-.17-.29-.42-.29-.7 0-.28.11-.53.29-.71C3.34 8.78 7.46 7 12 7s8.66 1.78 11.71 4.67c.18.18.29.43.29.71 0 .28-.11.53-.29.71l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.11-.7-.28-.79-.74-1.69-1.36-2.67-1.85-.33-.16-.56-.5-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z"/></svg>
+            </button>
+            <button class="call-btn btn-accept" onclick="handleCall(true)">
+                <svg width="30" height="30" viewBox="0 0 24 24" fill="#fff"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- Fake Notification -->
+    <div id="notification">
+        <div class="avatar" id="notif-avatar">👤</div>
+        <div class="notif-text">
+            <div class="notif-title" id="notif-title">Name</div>
+            <div class="notif-desc" id="notif-desc">Nachricht...</div>
+        </div>
+    </div>
+
+    <!-- Hauptansicht -->
+    <div id="main-view">
+        <div class="header">
+            <div class="header-top">
+                <h1>WhatsApp</h1>
+                <div>
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="var(--text-secondary)"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="var(--text-secondary)" style="margin-left: 15px;"><path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>
+                </div>
+            </div>
+            <div class="tabs">
+                <div class="tab active" onclick="switchTab('chats')">Chats <span id="main-unread-badge" class="tab-badge">1</span></div>
+                <div class="tab" onclick="switchTab('status')">Status <span id="status-badge" class="tab-badge" style="background-color: var(--danger)">•</span></div>
+                <div class="tab" onclick="switchTab('calls')">Anrufe</div>
+            </div>
+        </div>
+
+        <div class="content-area">
+            <!-- Chats Tab -->
+            <div id="chats-section" class="content-section active">
+                <div id="chat-list-container"></div>
+                <div class="branding-footer">
+                    A BilalToday.com Experience<br>
+                    <span class="reset-btn-link" onclick="resetGame()">Spiel zurücksetzen</span>
+                </div>
+            </div>
+
+            <!-- Status Tab -->
+            <div id="status-section" class="content-section">
+                <div class="status-header">Aktuelle Updates</div>
+                <div id="status-list-container">
+                    <div style="padding: 20px; text-align: center; color: var(--text-secondary); font-size: 14px; font-style: italic;" id="no-status-msg">Keine neuen Updates.</div>
+                </div>
+            </div>
+
+            <!-- Anrufe Tab -->
+            <div id="calls-section" class="content-section">
+                <div id="calls-list-container">
+                    <div style="padding: 20px; text-align: center; color: var(--text-secondary); font-size: 14px; font-style: italic;" id="no-calls-msg">Keine Anrufe.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Status Viewer -->
+    <div id="status-viewer">
+        <div class="status-progress-container">
+            <div class="status-progress-bar"><div class="status-progress-fill" id="status-fill"></div></div>
+        </div>
+        <div class="status-top-bar">
+            <div class="avatar" id="viewer-avatar">👤</div>
+            <div>
+                <div class="status-author" id="viewer-name">Name</div>
+                <div class="status-time" id="viewer-time">vor 5 Min</div>
+            </div>
+            <button class="close-status-btn" onclick="closeStatus()">✕</button>
+        </div>
+        <div class="status-content" id="viewer-content" onclick="closeStatus()">
+            <div class="status-text" id="viewer-text">Text</div>
+        </div>
+    </div>
+
+    <!-- Chat Fenster -->
+    <div id="chat-view">
+        <div class="chat-header">
+            <button class="back-btn" onclick="closeChat()">
+                <svg viewBox="0 0 24 24"><path d="M15.41 16.59L10.83 12l4.58-4.59L14 6l-6 6 6 6 1.41-1.41z"/></svg>
+            </button>
+            <div class="chat-header-info">
+                <div class="avatar" id="current-chat-avatar">👤</div>
+                <div class="chat-header-text">
+                    <div class="chat-header-name" id="current-chat-name">Name</div>
+                    <div class="chat-header-status" id="current-chat-status">online</div>
+                </div>
+            </div>
+            <div style="padding: 10px;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="var(--accent)"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/></svg>
+            </div>
+        </div>
+
+        <div class="chat-messages-container" id="chat-messages">
+            <!-- Nachrichten -->
+        </div>
+
+        <div class="chat-input-area" id="chat-input">
+            <div class="choices-container" id="choices-container">
+                <div class="choice-empty">Warte auf Nachricht...</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // === GAME ENGINE & DATEN ===
+
+    // Komplexe Story mit mehreren Verzweigungen und Anrufen
+    const storyData = {
+        chats: {
+            sarah: {
+                id: "sarah", name: "Sarah 👱‍♀️", avatar: "👱‍♀️",
+                nodes: {
+                    start: {
+                        messages: [
+                            { text: "Hey! Bist du schon unterwegs?", delay: 1500 },
+                            { text: "Die Party fängt gleich an und ich kenne hier kaum jemanden 🙄", delay: 2000 }
+                        ],
+                        choices: [
+                            { text: "Bin gleich da, muss nur noch Schuhe anziehen.", next: "s_ja" },
+                            { text: "Mir gehts nicht gut, ich bleibe heute zuhause.", next: "s_nein" },
+                            { text: "Ich komme etwas später nach.", next: "s_spaeter" }
+                        ]
+                    },
+                    s_ja: {
+                        onEnter: () => { unlockChat('unknown', 'u_start_ja'); },
+                        messages: [
+                            { text: "Yaaay! Beeil dich! 🎉", delay: 1500 }
+                        ],
+                        choices: [] // Pausiert, bis Unknown fortschreitet
+                    },
+                    s_nein: {
+                        onEnter: () => { unlockChat('unknown', 'u_start_nein'); },
+                        messages: [
+                            { text: "Oh nein, schade 😢 Gute Besserung!", delay: 1500 }
+                        ],
+                        choices: []
+                    },
+                    s_spaeter: {
+                        onEnter: () => { unlockChat('unknown', 'u_start_nein'); },
+                        messages: [
+                            { text: "Okay, aber lass mich nicht ewig warten!", delay: 1500 }
+                        ],
+                        choices: []
+                    },
+                    s_help: {
+                        messages: [
+                            { text: "Hä wovon redest du? Mach mir keine Angst!", delay: 2000 }
+                        ],
+                        choices: [
+                            { text: "Jemand ist an meinem Haus! Ruf die Polizei!", next: "s_police_call" },
+                            { text: "Vergiss es, wahrscheinlich nur Einbildung...", next: "s_ignore" }
+                        ]
+                    },
+                    s_police_call: {
+                        onEnter: () => { 
+                            unlockChat('polizei', 'p_start'); 
+                            triggerNotification('Polizei', 'Notrufzentrale...');
+                        },
+                        messages: [
+                            { text: "Oh mein Gott, okay ich rufe sie an! Versteck dich!!", delay: 2000 }
+                        ],
+                        choices: []
+                    },
+                    s_ignore: {
+                        messages: [
+                            { text: "Okay... pass trotzdem auf dich auf.", delay: 2000 }
+                        ],
+                        choices: []
+                    }
+                }
+            },
+            unknown: {
+                id: "unknown", name: "Unbekannte Nummer", avatar: "⬛",
+                nodes: {
+                    locked: { messages: [], choices: [] },
+                    u_start_ja: {
+                        messages: [
+                            { text: "Geh nicht aus dem Haus.", delay: 1500 },
+                            { text: "Es ist sicherer drinnen.", delay: 2000 }
+                        ],
+                        choices: [
+                            { text: "Wer ist da?", next: "u_who" },
+                            { text: "Sarah, bist du das? Sehr witzig.", next: "u_joke" },
+                            { text: "Lass mich in Ruhe.", next: "u_angry" }
+                        ]
+                    },
+                    u_start_nein: {
+                        messages: [
+                            { text: "Gute Entscheidung, zuhause zu bleiben.", delay: 1500 },
+                            { text: "Draußen ist es heute gefährlich.", delay: 2000 }
+                        ],
+                        choices: [
+                            { text: "Wer bist du?!", next: "u_who" },
+                            { text: "Woher weißt du, dass ich zuhause bin?", next: "u_who" },
+                            { text: "Lass mich in Ruhe.", next: "u_angry" }
+                        ]
+                    },
+                    u_who: {
+                        onEnter: () => { unlockStatus('status_haus'); },
+                        messages: [
+                            { text: "Namen sind unwichtig.", delay: 2000 },
+                            { text: "Wichtig ist nur, dass du das Licht ausmachst.", delay: 2500 }
+                        ],
+                        choices: [
+                            { text: "Warum sollte ich?", next: "u_why" },
+                            { text: "Ich rufe die Polizei!", next: "u_threat" }
+                        ]
+                    },
+                    u_joke: {
+                        onEnter: () => { unlockStatus('status_haus'); },
+                        messages: [
+                            { text: "Sieh dir meinen Status an. Sieht das wie Sarah aus?", delay: 2000 }
+                        ],
+                        choices: [
+                            { text: "Woher hast du das Foto von meinem Haus?!", next: "u_why" },
+                            { text: "Ich rufe die Polizei!", next: "u_threat" }
+                        ]
+                    },
+                    u_angry: {
+                        onEnter: () => { unlockStatus('status_haus'); },
+                        messages: [
+                            { text: "Werde nicht unhöflich. Ich bin schon so nah.", delay: 2000 }
+                        ],
+                        choices: [
+                            { text: "Was willst du?", next: "u_why" },
+                            { text: "Ich rufe die Polizei!", next: "u_threat" }
+                        ]
+                    },
+                    u_why: {
+                        triggerCall: { caller: "unknown", onAccept: "u_call_accepted", onDecline: "u_call_declined" },
+                        messages: [], choices: [] // Wartet auf Anruf-Ergebnis
+                    },
+                    u_threat: {
+                        messages: [
+                            { text: "Versuch es ruhig. Du wirst sehen, was passiert.", delay: 2000 }
+                        ],
+                        choices: [
+                            { text: "(Sarah schreiben)", next: "u_redirect_sarah" },
+                            { text: "(Selbst Polizei kontaktieren)", next: "u_redirect_polizei" }
+                        ]
+                    },
+                    u_redirect_sarah: {
+                        onEnter: () => { triggerNode('sarah', 's_help'); },
+                        messages: [], choices: []
+                    },
+                    u_redirect_polizei: {
+                        onEnter: () => { unlockChat('polizei', 'p_start'); },
+                        messages: [], choices: []
+                    },
+                    u_call_accepted: {
+                        messages: [
+                            { text: "Du hast also meine Stimme gehört...", delay: 2000 },
+                            { text: "Jetzt mach die Haustür auf.", delay: 2000 }
+                        ],
+                        choices: [
+                            { text: "Niemals!", next: "u_end_bad" },
+                            { text: "(Polizei kontaktieren)", next: "u_redirect_polizei" }
+                        ]
+                    },
+                    u_call_declined: {
+                        messages: [
+                            { text: "Warum drückst du mich weg?", delay: 1500 },
+                            { text: "Das macht mich wütend.", delay: 2000 }
+                        ],
+                        choices: [
+                            { text: "Es tut mir leid...", next: "u_end_bad" },
+                            { text: "(Polizei kontaktieren)", next: "u_redirect_polizei" }
+                        ]
+                    },
+                    u_end_bad: {
+                        messages: [
+                            { text: "Zu spät. Ich bin schon drin.", delay: 3000 }
+                        ],
+                        choices: [] // Game Over
+                    },
+                    u_hacked: {
+                        messages: [
+                            { text: "Ich sagte doch, es bringt nichts, sie zu rufen.", delay: 1000 },
+                            { text: "Niemand wird dir helfen. 👁️", delay: 2000 }
+                        ],
+                        choices: [] // Game Over Alternate
+                    }
+                }
+            },
+            polizei: {
+                id: "polizei", name: "Polizei Notruf", avatar: "🚓",
+                nodes: {
+                    locked: { messages: [], choices: [] },
+                    p_start: {
+                        messages: [
+                            { text: "Notrufzentrale, was ist Ihr Notfall?", delay: 1500 }
+                        ],
+                        choices: [
+                            { text: "Hilfe! Jemand steht vor meinem Haus!", next: "p_hacked" },
+                            { text: "Ich werde gestalkt, bitte schicken Sie jemanden!", next: "p_hacked" }
+                        ]
+                    },
+                    p_hacked: {
+                        onEnter: () => {
+                            // Hacker übernimmt den Chat
+                            setTimeout(() => {
+                                document.getElementById('current-chat-name').innerText = "SYSTEM COMPROMISED";
+                                document.getElementById('current-chat-name').style.color = "var(--danger)";
+                                triggerNode('unknown', 'u_hacked');
+                            }, 3000);
+                        },
+                        messages: [
+                            { text: "Verstanden. Wir orten Ihre Position...", delay: 2000 },
+                            { text: "...", delay: 1500 },
+                            { text: "Systemfehler. Verbindung getrennt.", delay: 1000 }
+                        ],
+                        choices: []
+                    }
+                }
+            }
+        },
+        statuses: {
+            status_haus: {
+                id: 'status_haus', author: 'Unbekannte Nummer', avatar: '⬛', time: 'Gerade eben',
+                text: 'Schönes Haus.',
+                bg: 'url("https://images.unsplash.com/photo-1513694203232-719a280e022f?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80")',
+                viewed: false
+            }
+        }
+    };
+
+    // Standard Spielstand
+    const defaultState = {
+        activeChatId: null,
+        unlockedStatuses: [],
+        callHistory: [],
+        chats: {
+            sarah: { unlocked: true, currentNode: "start", history: [], unread: 1, lastTime: "20:15" },
+            unknown: { unlocked: false, currentNode: "locked", history: [], unread: 0, lastTime: "" },
+            polizei: { unlocked: false, currentNode: "locked", history: [], unread: 0, lastTime: "" }
+        }
+    };
+
+    let gameState = JSON.parse(JSON.stringify(defaultState));
+    let isTyping = false;
+    let pendingCall = null;
+
+    // === SYSTEM LADE-LOGIK ===
+
+    function initGame() {
+        const saved = localStorage.getItem('bt_chatStorySave');
+        if (saved) {
+            try { gameState = JSON.parse(saved); } catch (e) { console.error("Savegame defekt"); }
+        }
+
+        // Splash Screen ausblenden
+        setTimeout(() => {
+            document.getElementById('splash-screen').style.opacity = '0';
+            setTimeout(() => {
+                document.getElementById('splash-screen').classList.add('hidden');
+                renderChats();
+                updateBadges();
+                renderCalls();
+                
+                if (gameState.chats.sarah.history.length === 0) {
+                    setTimeout(() => triggerNode('sarah', 'start'), 1000);
+                }
+            }, 800);
+        }, 3000);
+    }
+
+    function saveState() {
+        localStorage.setItem('bt_chatStorySave', JSON.stringify(gameState));
+        updateBadges();
+        if(!gameState.activeChatId) renderChats();
+    }
+
+    function resetGame() {
+        if(confirm("Möchtest du das Spiel wirklich neustarten?")) {
+            localStorage.removeItem('bt_chatStorySave');
+            location.reload();
+        }
+    }
+
+    // === UI HELPER ===
+
+    function getCurrentTime() {
+        const now = new Date();
+        return `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+    }
+
+    function switchTab(tabId) {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.content-section').forEach(c => c.classList.remove('active'));
+        
+        event.currentTarget.classList.add('active');
+        document.getElementById(`${tabId}-section`).classList.add('active');
+        
+        if (tabId === 'status') renderStatuses();
+    }
+
+    function updateBadges() {
+        let totalUnread = 0;
+        Object.values(gameState.chats).forEach(c => { if(c.unlocked) totalUnread += c.unread; });
+        
+        const badge = document.getElementById('main-unread-badge');
+        if (totalUnread > 0) { badge.style.display = 'block'; badge.innerText = totalUnread; } 
+        else { badge.style.display = 'none'; }
+
+        const newStatuses = gameState.unlockedStatuses.filter(id => !storyData.statuses[id].viewed).length;
+        document.getElementById('status-badge').style.display = newStatuses > 0 ? 'block' : 'none';
+    }
+
+    // === NOTIFICATION SYSTEM ===
+
+    function triggerNotification(title, text) {
+        if(gameState.activeChatId) return; 
+        
+        const notif = document.getElementById('notification');
+        document.getElementById('notif-title').innerText = title;
+        document.getElementById('notif-desc').innerText = text;
+        
+        if(navigator.vibrate) navigator.vibrate([200, 100, 200]);
+
+        notif.classList.add('show');
+        setTimeout(() => { notif.classList.remove('show'); }, 4000);
+    }
+
+    // === CALL SYSTEM ===
+
+    function initiateCall(callerId, onAcceptNode, onDeclineNode) {
+        pendingCall = { callerId, onAcceptNode, onDeclineNode };
+        const data = storyData.chats[callerId];
+        
+        document.getElementById('call-screen-name').innerText = data.name;
+        document.getElementById('call-screen-avatar').innerText = data.avatar;
+        document.getElementById('call-screen').classList.add('active');
+        document.getElementById('call-actions').style.display = 'flex';
+        document.getElementById('call-status-text').style.display = 'none';
+        
+        if(navigator.vibrate) navigator.vibrate([500, 500, 500, 500, 500]);
+    }
+
+    function handleCall(accepted) {
+        if(!pendingCall) return;
+        const callerId = pendingCall.callerId;
+        const nextNode = accepted ? pendingCall.onAcceptNode : pendingCall.onDeclineNode;
+        const time = getCurrentTime();
+
+        if(navigator.vibrate) navigator.vibrate(0); // Stop vibration
+
+        if (accepted) {
+            document.getElementById('call-actions').style.display = 'none';
+            const statusText = document.getElementById('call-status-text');
+            statusText.style.display = 'block';
+            statusText.innerText = "00:01";
+            
+            // Simuliere gruseliges Schweigen für 3 Sekunden
+            setTimeout(() => {
+                endCallUI(callerId, "Angenommen", time);
+                triggerNode(callerId, nextNode);
+            }, 3000);
+        } else {
+            endCallUI(callerId, "Abgelehnt", time);
+            triggerNode(callerId, nextNode);
+        }
+        pendingCall = null;
+    }
+
+    function endCallUI(callerId, status, time) {
+        document.getElementById('call-screen').classList.remove('active');
+        const data = storyData.chats[callerId];
+        gameState.callHistory.unshift({ name: data.name, avatar: data.avatar, time: time, status: status });
+        renderCalls();
+        saveState();
+    }
+
+    function renderCalls() {
+        const container = document.getElementById('calls-list-container');
+        if(gameState.callHistory.length === 0) {
+            document.getElementById('no-calls-msg').style.display = 'block';
+            return;
+        }
+        document.getElementById('no-calls-msg').style.display = 'none';
+        container.innerHTML = '';
+        
+        gameState.callHistory.forEach(call => {
+            const isMissed = call.status === "Abgelehnt";
+            container.innerHTML += `
+                <div class="call-item">
+                    <div class="avatar">${call.avatar}</div>
+                    <div class="call-info-text">
+                        <div class="call-row-1" style="color: ${isMissed ? 'var(--danger)' : 'var(--text-primary)'}">${call.name}</div>
+                        <div class="call-row-2">
+                            ${isMissed ? '<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>' : '<svg viewBox="0 0 24 24" fill="var(--accent)"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>'}
+                            ${call.time} - ${call.status}
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+    }
+
+    // === CHAT LISTEN LOGIK ===
+
+    function renderChats() {
+        const container = document.getElementById('chat-list-container');
+        container.innerHTML = '';
+
+        const chatIds = Object.keys(gameState.chats).filter(id => gameState.chats[id].unlocked);
+        chatIds.sort((a, b) => gameState.chats[b].unread - gameState.chats[a].unread);
+
+        chatIds.forEach(id => {
+            const chatState = gameState.chats[id];
+            const data = storyData.chats[id];
+            
+            let lastMsg = "Tippe, um den Chat zu öffnen";
+            if (chatState.history.length > 0) {
+                const lastHistoryObj = chatState.history[chatState.history.length - 1];
+                lastMsg = lastHistoryObj.speaker === 'user' ? `Du: ${lastHistoryObj.text}` : lastHistoryObj.text;
+            }
+
+            const isCurrentlyTyping = (isTyping && gameState.activeChatId !== id && document.getElementById(`typing-${id}`));
+
+            container.innerHTML += `
+                <div class="chat-item" onclick="openChat('${id}')">
+                    <div class="avatar">${data.avatar}</div>
+                    <div class="chat-info">
+                        <div class="chat-row">
+                            <span class="chat-name">${data.name}</span>
+                            <span class="chat-time">${chatState.lastTime || 'Gerade eben'}</span>
+                        </div>
+                        <div class="chat-row">
+                            <span class="chat-preview ${isCurrentlyTyping ? 'typing-indicator-list' : ''}" id="preview-${id}">
+                                ${isCurrentlyTyping ? 'schreibt...' : lastMsg}
+                            </span>
+                            ${chatState.unread > 0 ? `<div class="unread-badge">${chatState.unread}</div>` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+    }
+
+    // === CHAT FENSTER LOGIK ===
+
+    function openChat(chatId) {
+        gameState.activeChatId = chatId;
+        gameState.chats[chatId].unread = 0;
+        saveState();
+
+        const data = storyData.chats[chatId];
+        document.getElementById('current-chat-name').innerText = data.name;
+        document.getElementById('current-chat-name').style.color = "var(--text-primary)"; // Reset falls gehackt
+        document.getElementById('current-chat-avatar').innerText = data.avatar;
+        
+        document.getElementById('chat-view').classList.add('open');
+
+        renderChatHistory(chatId);
+        renderChoices(chatId);
+    }
+
+    function closeChat() {
+        gameState.activeChatId = null;
+        document.getElementById('chat-view').classList.remove('open');
+        renderChats();
+    }
+
+    function renderChatHistory(chatId) {
+        const container = document.getElementById('chat-messages');
+        container.innerHTML = '<div class="system-msg">🔒 Nachrichten in diesem Chat sind Ende-zu-Ende verschlüsselt. Niemand außerhalb dieses Chats kann sie lesen oder anhören.</div>';
+        
+        let lastSpeaker = null;
+        gameState.chats[chatId].history.forEach(msg => {
+            appendMessageHTML(msg.speaker, msg.text, msg.time, false, lastSpeaker);
+            lastSpeaker = msg.speaker;
+        });
+        scrollToBottom();
+    }
+
+    function appendMessageHTML(speaker, text, time, animate = true, lastSpeaker = null) {
+        const container = document.getElementById('chat-messages');
+        const isUser = speaker === 'user';
+        const isFirstInGroup = lastSpeaker !== speaker;
+        
+        const msgDiv = document.createElement('div');
+        msgDiv.className = `message ${isUser ? 'msg-out' : 'msg-in'} ${isFirstInGroup ? 'first-in-group' : ''}`;
+        if(!animate) msgDiv.style.animation = 'none';
+        
+        let timeHtml = `<div class="msg-time">${time} ${isUser ? '<svg viewBox="0 0 24 24"><path d="M18 7l-1.41-1.41-6.34 6.34 1.41 1.41L18 7zm4.24-1.41L11.66 16.17 7.48 12l-1.41 1.41L11.66 19l12-12-1.42-1.41zM.41 13.41L6 19l1.41-1.41L1.83 12 .41 13.41z"/></svg>' : ''}</div>`;
+        msgDiv.innerHTML = text + timeHtml;
+        
+        const typingEl = document.getElementById('typing-indicator-bubble');
+        if(typingEl) { container.insertBefore(msgDiv, typingEl); } 
+        else { container.appendChild(msgDiv); }
+        
+        scrollToBottom();
+    }
+
+    function scrollToBottom() {
+        const container = document.getElementById('chat-messages');
+        container.scrollTop = container.scrollHeight;
+    }
+
+    function showTypingBubble(chatId) {
+        isTyping = true;
+        document.getElementById('current-chat-status').innerText = "schreibt...";
+        document.getElementById('current-chat-status').classList.add('status-typing');
+        
+        if (gameState.activeChatId === chatId) {
+            const container = document.getElementById('chat-messages');
+            const typingDiv = document.createElement('div');
+            typingDiv.id = 'typing-indicator-bubble';
+            typingDiv.className = 'typing-bubble';
+            typingDiv.innerHTML = '<div class="dot"></div><div class="dot"></div><div class="dot"></div>';
+            container.appendChild(typingDiv);
+            scrollToBottom();
+        }
+    }
+
+    function hideTypingBubble(chatId) {
+        isTyping = false;
+        document.getElementById('current-chat-status').innerText = "online";
+        document.getElementById('current-chat-status').classList.remove('status-typing');
+        
+        const typingEl = document.getElementById('typing-indicator-bubble');
+        if(typingEl) typingEl.remove();
+        if (gameState.activeChatId !== chatId) renderChats();
+    }
+
+    // === GAMEPLAY & LOGIK ENGINE ===
+
+    function unlockChat(chatId, startNode) {
+        if (!gameState.chats[chatId].unlocked) {
+            gameState.chats[chatId].unlocked = true;
+            gameState.chats[chatId].currentNode = startNode;
+            gameState.chats[chatId].lastTime = getCurrentTime();
+            triggerNode(chatId, startNode);
+        }
+    }
+
+    function triggerNode(chatId, nodeId) {
+        gameState.chats[chatId].currentNode = nodeId;
+        const node = storyData.chats[chatId].nodes[nodeId];
+        
+        if(node.onEnter) node.onEnter();
+
+        if(node.triggerCall) {
+            initiateCall(node.triggerCall.caller, node.triggerCall.onAccept, node.triggerCall.onDecline);
+            return; // Stoppe Text-Verarbeitung, da Call UI übernimmt
+        }
+
+        playNPCMessages(chatId, node.messages, 0, () => {
+            if(gameState.activeChatId === chatId) renderChoices(chatId);
+            saveState();
+        });
+    }
+
+    function playNPCMessages(chatId, messages, index, callback) {
+        if (index >= messages.length) {
+            if(callback) callback();
+            return;
+        }
+
+        const msg = messages[index];
+        const delay = msg.delay || 1500;
+
+        showTypingBubble(chatId);
+
+        setTimeout(() => {
+            hideTypingBubble(chatId);
+            const time = getCurrentTime();
+            
+            const lastSpeaker = gameState.chats[chatId].history.length > 0 ? gameState.chats[chatId].history[gameState.chats[chatId].history.length-1].speaker : null;
+            gameState.chats[chatId].history.push({ speaker: 'npc', text: msg.text, time: time });
+            gameState.chats[chatId].lastTime = time;
+            
+            if (gameState.activeChatId === chatId) {
+                appendMessageHTML('npc', msg.text, time, true, lastSpeaker);
+            } else {
+                gameState.chats[chatId].unread += 1;
+                triggerNotification(storyData.chats[chatId].name, msg.text);
+            }
+            
+            saveState();
+
+            setTimeout(() => { playNPCMessages(chatId, messages, index + 1, callback); }, 400);
+        }, delay);
+    }
+
+    function renderChoices(chatId) {
+        const container = document.getElementById('choices-container');
+        container.innerHTML = '';
+        const node = storyData.chats[chatId].nodes[gameState.chats[chatId].currentNode];
+        
+        if (!node || !node.choices || node.choices.length === 0) {
+            if(!isTyping) container.innerHTML = '<div class="choice-empty">Keine Antwort möglich.</div>';
+            return;
+        }
+
+        node.choices.forEach(choice => {
+            const btn = document.createElement('button');
+            btn.className = 'choice-btn';
+            btn.innerText = choice.text;
+            btn.onclick = () => makeChoice(chatId, choice);
+            container.appendChild(btn);
+        });
+    }
+
+    function makeChoice(chatId, choice) {
+        const container = document.getElementById('choices-container');
+        container.innerHTML = '<div class="choice-empty">Warte auf Antwort...</div>';
+
+        const time = getCurrentTime();
+        const lastSpeaker = gameState.chats[chatId].history.length > 0 ? gameState.chats[chatId].history[gameState.chats[chatId].history.length-1].speaker : null;
+        
+        gameState.chats[chatId].history.push({ speaker: 'user', text: choice.text, time: time });
+        gameState.chats[chatId].lastTime = time;
+        appendMessageHTML('user', choice.text, time, true, lastSpeaker);
+        saveState();
+
+        setTimeout(() => { triggerNode(chatId, choice.next); }, 600);
+    }
+
+    // === STATUS FEATURE ===
+
+    function unlockStatus(statusId) {
+        if(!gameState.unlockedStatuses.includes(statusId)) {
+            gameState.unlockedStatuses.push(statusId);
+            saveState();
+        }
+    }
+
+    function renderStatuses() {
+        const container = document.getElementById('status-list-container');
+        if(gameState.unlockedStatuses.length === 0) {
+            document.getElementById('no-status-msg').style.display = 'block';
+            return;
+        }
+        document.getElementById('no-status-msg').style.display = 'none';
+        container.innerHTML = '';
+
+        gameState.unlockedStatuses.forEach(id => {
+            const status = storyData.statuses[id];
+            container.innerHTML += `
+                <div class="chat-item" onclick="openStatusViewer('${id}')">
+                    <div class="avatar ${status.viewed ? 'viewed' : ''}">${status.avatar}</div>
+                    <div class="chat-info">
+                        <div class="chat-name">${status.author}</div>
+                        <div class="chat-time">${status.time}</div>
+                    </div>
+                </div>
+            `;
+        });
+    }
+
+    let statusTimeout;
+
+    // Globale Funktion damit onclick im HTML sie findet
+    window.openStatusViewer = function(statusId) {
+        const status = storyData.statuses[statusId];
+        const viewer = document.getElementById('status-viewer');
+        
+        document.getElementById('viewer-name').innerText = status.author;
+        document.getElementById('viewer-avatar').innerText = status.avatar;
+        document.getElementById('viewer-time').innerText = status.time;
+        document.getElementById('viewer-text').innerText = status.text;
+        
+        const content = document.getElementById('viewer-content');
+        content.style.backgroundImage = status.bg.includes('url') ? status.bg : '';
+        if(!status.bg.includes('url')) content.style.background = status.bg;
+
+        viewer.classList.add('open');
+
+        const fill = document.getElementById('status-fill');
+        fill.style.transition = 'none';
+        fill.style.width = '0%';
+        
+        setTimeout(() => {
+            fill.style.transition = 'width 4s linear';
+            fill.style.width = '100%';
+        }, 50);
+
+        statusTimeout = setTimeout(() => { closeStatus(); }, 4050);
+
+        status.viewed = true;
+        saveState();
+        renderStatuses();
+    }
+
+    window.closeStatus = function() {
+        clearTimeout(statusTimeout);
+        document.getElementById('status-viewer').classList.remove('open');
+    }
+
+    // === START ===
+    window.onload = initGame;
+
+</script>
+</body>
+</html>
+
+
