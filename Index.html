@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Bilal Today Assistant</title>
+    <!-- Tailwind CSS (CDN für direktes Styling ohne Build-Prozess) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Phosphor Icons (Für moderne, schöne Icons) -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    
+    <style>
+        /* Custom Scrollbar im ChatGPT-Style */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        /* Basis-Styling & Animationen */
+        body {
+            background-color: #212121; /* ChatGPT Dark Mode Background */
+            color: #ececf1;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        .chat-bubble {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Lade-Animation (3 Punkte) */
+        .typing-dot {
+            animation: typing 1.4s infinite ease-in-out both;
+        }
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+        
+        @keyframes typing {
+            0%, 80%, 100% { transform: scale(0); opacity: 0.3; }
+            40% { transform: scale(1); opacity: 1; }
+        }
+
+        /* Blinker-Cursor für den Typing-Effekt */
+        .cursor {
+            display: inline-block;
+            width: 4px;
+            height: 1.2em;
+            background-color: #ececf1;
+            vertical-align: text-bottom;
+            animation: blink 1s step-end infinite;
+            margin-left: 2px;
+        }
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+    </style>
+</head>
+<body class="flex flex-col h-screen overflow-hidden selection:bg-blue-500/30">
+
+    <!-- 🔴 HEADER -->
+    <header class="flex-shrink-0 flex items-center justify-between px-4 py-3 bg-[#171717] border-b border-gray-800 z-10 shadow-sm">
+        <div class="flex items-center gap-3">
+            <div class="bg-blue-600 p-1.5 rounded-lg shadow-inner flex items-center justify-center">
+                <i class="ph-bold ph-sparkle text-white text-lg"></i>
+            </div>
+            <h1 class="font-semibold text-lg tracking-wide hidden sm:block">Bilal Today Assistant</h1>
+            <h1 class="font-semibold text-lg tracking-wide sm:hidden">Assistant</h1>
+        </div>
+        <button onclick="startNewChat()" class="flex items-center gap-2 text-sm font-medium px-3 py-2 rounded-lg bg-[#212121] hover:bg-[#2f2f2f] transition-colors border border-gray-700">
+            <i class="ph-bold ph-plus"></i>
+            <span class="hidden sm:inline">Neuer Chat</span>
+        </button>
+    </header>
+
+    <!-- 🔴 CHAT BEREICH -->
+    <main id="chat-container" class="flex-1 overflow-y-auto p-4 md:p-6 scroll-smooth w-full flex flex-col items-center">
+        <div class="max-w-3xl w-full flex flex-col justify-start min-h-full" id="messages-wrapper">
+            
+            <!-- Startbildschirm -->
+            <div id="welcome-screen" class="flex flex-col items-center justify-center h-full text-center space-y-8 py-10 mt-10 transition-opacity duration-500">
+                <div class="w-16 h-16 bg-blue-600/10 rounded-2xl flex items-center justify-center border border-blue-500/20 mb-2 shadow-[0_0_30px_rgba(37,99,235,0.15)]">
+                    <i class="ph-fill ph-robot text-4xl text-blue-500"></i>
+                </div>
+                <h2 class="text-2xl md:text-3xl font-bold">Wie kann ich helfen?</h2>
+                
+                <!-- Schnellfragen -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 w-full max-w-2xl mt-8">
+                    <button onclick="handleQuickQuestion('Was ist Bilal Today?')" class="p-4 bg-[#2f2f2f] border border-gray-700 rounded-xl hover:bg-[#3b3b3b] text-left transition-all group flex items-start justify-between shadow-sm">
+                        <span class="text-sm md:text-base text-gray-300 group-hover:text-white font-medium">Was ist Bilal Today?</span>
+                        <i class="ph-bold ph-arrow-up-right text-gray-500 group-hover:text-blue-400"></i>
+                    </button>
+                    <button onclick="handleQuickQuestion('Wer steckt hinter Bilal Today?')" class="p-4 bg-[#2f2f2f] border border-gray-700 rounded-xl hover:bg-[#3b3b3b] text-left transition-all group flex items-start justify-between shadow-sm">
+                        <span class="text-sm md:text-base text-gray-300 group-hover:text-white font-medium">Wer steckt dahinter?</span>
+                        <i class="ph-bold ph-arrow-up-right text-gray-500 group-hover:text-blue-400"></i>
+                    </button>
+                    <button onclick="handleQuickQuestion('Ist die Nutzung kostenlos?')" class="p-4 bg-[#2f2f2f] border border-gray-700 rounded-xl hover:bg-[#3b3b3b] text-left transition-all group flex items-start justify-between shadow-sm">
+                        <span class="text-sm md:text-base text-gray-300 group-hover:text-white font-medium">Ist das kostenlos?</span>
+                        <i class="ph-bold ph-arrow-up-right text-gray-500 group-hover:text-blue-400"></i>
+                    </button>
+                    <button onclick="handleQuickQuestion('Wie funktioniert das hier?')" class="p-4 bg-[#2f2f2f] border border-gray-700 rounded-xl hover:bg-[#3b3b3b] text-left transition-all group flex items-start justify-between shadow-sm">
+                        <span class="text-sm md:text-base text-gray-300 group-hover:text-white font-medium">Wie funktioniert das?</span>
+                        <i class="ph-bold ph-arrow-up-right text-gray-500 group-hover:text-blue-400"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Nachrichten landen hier -->
+            <div id="chat-messages" class="flex flex-col w-full pb-4 hidden"></div>
+            
+            <!-- Lade-Indikator -->
+            <div id="loading-indicator" class="flex w-full mb-6 justify-start hidden">
+                <div class="flex max-w-[85%] md:max-w-[75%] flex-row gap-3 md:gap-4">
+                    <div class="flex-shrink-0 w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center shadow-md bg-[#19c37d]">
+                        <i class="ph-fill ph-robot text-white text-lg"></i>
+                    </div>
+                    <div class="px-4 py-3 rounded-2xl rounded-tl-sm bg-[#2f2f2f] border border-gray-700 flex items-center gap-1.5 shadow-sm h-[44px]">
+                        <div class="w-2 h-2 bg-gray-400 rounded-full typing-dot"></div>
+                        <div class="w-2 h-2 bg-gray-400 rounded-full typing-dot"></div>
+                        <div class="w-2 h-2 bg-gray-400 rounded-full typing-dot"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Scroll-Anker -->
+            <div id="scroll-anchor" class="h-4"></div>
+        </div>
+    </main>
+
+    <!-- 🔴 EINGABE BEREICH -->
+    <footer class="p-4 bg-gradient-to-t from-[#212121] via-[#212121] to-transparent flex-shrink-0 pb-6 md:pb-8 w-full">
+        <div class="max-w-3xl mx-auto relative">
+            <div class="relative flex items-end bg-[#2f2f2f] border border-gray-600 rounded-2xl focus-within:border-gray-400 transition-all shadow-lg overflow-hidden">
+                <textarea
+                    id="user-input"
+                    placeholder="Stell mir eine Frage an Bilal Today..."
+                    class="w-full bg-transparent text-gray-100 placeholder-gray-400 px-4 py-4 max-h-32 focus:outline-none resize-none overflow-y-auto"
+                    rows="1"
+                    style="min-height: 56px;"
+                ></textarea>
+                <button
+                    id="send-btn"
+                    onclick="sendMessage()"
+                    class="absolute right-2 bottom-2 md:bottom-2.5 p-2 rounded-xl transition-all bg-[#19c37d] text-white hover:bg-[#1a9a65] disabled:bg-gray-600 disabled:text-gray-400 disabled:cursor-not-allowed shadow-md flex items-center justify-center h-10 w-10"
+                    disabled
+                >
+                    <i class="ph-bold ph-paper-plane-right"></i>
+                </button>
+            </div>
+            <p class="text-center text-xs text-gray-500 mt-3">
+                Bilal Today Assistant kann Fehler machen. Vorbereitete Antworten für beste Ergebnisse.
+            </p>
+        </div>
+    </footer>
+
+    <!-- 🔴 JAVASCRIPT LOGIK -->
+    <script>
+        // ==========================================
+        // 📚 WISSENSBASIS (50 Fragen & Antworten)
+        // ==========================================
+        const qaData = [
+            { q: "Was ist Bilal Today?", a: "Bilal Today ist eine moderne Plattform, die Informationen, Tools und Inhalte rund um digitale Themen bietet." },
+            { q: "Wer steckt hinter Bilal Today?", a: "Bilal Today ist ein Projekt, das von einer kreativen Person oder einem Team aufgebaut wurde." },
+            { q: "Was kann ich hier machen?", a: "Du kannst Fragen stellen und Informationen über Bilal Today erhalten." },
+            { q: "Ist das eine KI?", a: "Ja, ich bin ein virtueller Assistent von Bilal Today, der auf eine Wissensbasis zugreift." },
+            { q: "Kann ich hier chatten?", a: "Ja, du kannst jederzeit mit mir chatten." },
+            { q: "Ist das kostenlos?", a: "Ja, die Nutzung ist komplett kostenlos." },
+            { q: "Wofür ist die Seite gedacht?", a: "Sie dient dazu, Informationen einfach und schnell bereitzustellen." },
+            { q: "Wie funktioniert das?", a: "Du stellst eine Frage und ich gebe dir eine passende Antwort aus meiner Datenbank." },
+            { q: "Ist das wie ChatGPT?", a: "Es ist ähnlich vom Design her, aber ich antworte speziell auf Fragen rund um Bilal Today." },
+            { q: "Was bedeutet Bilal Today?", a: "Der Name steht für moderne Inhalte und tägliche Innovation." },
+            { q: "Gibt es Updates?", a: "Ja, die Plattform wird regelmäßig verbessert." },
+            { q: "Kann ich Feedback geben?", a: "Ja, Feedback ist immer willkommen." },
+            { q: "Sind meine Daten sicher?", a: "Ja, deine Daten werden nicht gespeichert. Der Chat läuft nur in deinem Browser." },
+            { q: "Gibt es eine App?", a: "Aktuell ist es eine progressive Web-App, die du im Browser nutzt." },
+            { q: "Wer ist Bilal?", a: "Bilal ist Teil des Namens und steht für die Marke." },
+            { q: "Warum wurde das erstellt?", a: "Um Wissen einfach zugänglich zu machen." },
+            { q: "Kann ich eigene Fragen stellen?", a: "Ja, jederzeit. Probier es einfach aus!" },
+            { q: "Verstehst du alles?", a: "Ich verstehe viele Fragen, aber nicht alles. Meine Antworten sind festgelegt." },
+            { q: "Lernst du dazu?", a: "Nein, ich arbeite mit festen Antworten und lerne nicht automatisch aus Chats." },
+            { q: "Ist das live?", a: "Ja, du nutzt es in Echtzeit." },
+            { q: "Kann ich das teilen?", a: "Ja, gerne. Teile einfach den Link zur Seite." },
+            { q: "Ist das sicher?", a: "Ja, die Nutzung ist sicher." },
+            { q: "Brauche ich ein Konto?", a: "Nein, du kannst sofort loslegen." },
+            { q: "Gibt es Werbung?", a: "Nein, die Seite ist werbefrei." },
+            { q: "Ist das schnell?", a: "Ja, Antworten kommen sofort." },
+            { q: "Kann ich Fehler melden?", a: "Ja, bitte teile uns Fehler mit." },
+            { q: "Funktioniert das mobil?", a: "Ja, das Design ist perfekt für Smartphones optimiert." },
+            { q: "Was ist das Ziel?", a: "Einfacher Zugang zu relevanten Infos." },
+            { q: "Ist das offiziell?", a: "Ja, das ist der offizielle Assistent." },
+            { q: "Kann ich es speichern?", a: "Der Chat wird nicht gespeichert, wenn du die Seite neu lädst, fangen wir von vorne an." },
+            { q: "Gibt es mehrere Sprachen?", a: "Aktuell spreche ich hauptsächlich Deutsch." },
+            { q: "Kann ich Hilfe bekommen?", a: "Ja, jederzeit. Frag mich einfach!" },
+            { q: "Was ist besonders daran?", a: "Die einfache Nutzung und das moderne Design." },
+            { q: "Wie alt ist das Projekt?", a: "Das Projekt ist relativ neu und modern." },
+            { q: "Wird es erweitert?", a: "Ja, es sind Erweiterungen geplant." },
+            { q: "Kann ich mitarbeiten?", a: "Vielleicht in der Zukunft." },
+            { q: "Gibt es Support?", a: "Ich bin sozusagen dein First-Level-Support!" },
+            { q: "Ist es öffentlich?", a: "Ja, jeder kann darauf zugreifen." },
+            { q: "Was passiert im Hintergrund?", a: "Dein Text wird nach Keywords durchsucht und die beste Antwort wird ausgewählt." },
+            { q: "Gibt es Limits?", a: "Nein, du kannst so viele Fragen stellen wie du möchtest." },
+            { q: "Ist das anonym?", a: "Ja, komplett anonym." },
+            { q: "Kann ich es testen?", a: "Du nutzt und testest es gerade in diesem Moment!" },
+            { q: "Ist das seriös?", a: "Ja, absolut." },
+            { q: "Gibt es ein Team?", a: "Möglich, dass mehrere Leute im Hintergrund arbeiten." },
+            { q: "Ist das ein Startup?", a: "Kann man so sagen." },
+            { q: "Was kommt als nächstes?", a: "Lass dich überraschen! Neue Features sind in Planung." },
+            { q: "Ist das online?", a: "Ja, sonst könntest du mich nicht lesen." },
+            { q: "Kann ich Fragen wiederholen?", a: "Klar, ich antworte dir gerne auch ein zweites Mal." },
+            { q: "Gibt es Hilfe-Seiten?", a: "Derzeit bin ich deine primäre Hilfe-Seite." },
+            { q: "Was soll ich jetzt machen?", a: "Stell einfach deine erste Frage, falls du noch keine gestellt hast! 😊" }
+        ];
+
+        // ==========================================
+        // ⚙️ VARIABLEN & DOM-ELEMENTE
+        // ==========================================
+        const userInput = document.getElementById('user-input');
+        const sendBtn = document.getElementById('send-btn');
+        const chatMessages = document.getElementById('chat-messages');
+        const welcomeScreen = document.getElementById('welcome-screen');
+        const loadingIndicator = document.getElementById('loading-indicator');
+        const scrollAnchor = document.getElementById('scroll-anchor');
+        const chatContainer = document.getElementById('chat-container');
+        
+        let isTyping = false;
+
+        // Auto-Resize Textarea
+        userInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = (this.scrollHeight < 128 ? this.scrollHeight : 128) + 'px';
+            sendBtn.disabled = this.value.trim() === '';
+            
+            if(this.value.trim() === '') {
+                this.style.height = '56px';
+            }
+        });
+
+        // Enter zum Senden
+        userInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        function scrollToBottom() {
+            scrollAnchor.scrollIntoView({ behavior: "smooth" });
+        }
+
+        // ==========================================
+        // 🤖 KI LOGIK (Keyword Matching)
+        // ==========================================
+        function getBotResponse(text) {
+            const inputClean = text.toLowerCase().replace(/[^\w\säöüß]/gi, '').trim();
+            const inputWords = inputClean.split(/\s+/).filter(w => w.length > 2 || w === 'ki');
+
+            // 1. Exakte Übereinstimmung
+            for (let item of qaData) {
+                const qClean = item.q.toLowerCase().replace(/[^\w\säöüß]/gi, '').trim();
+                if (qClean === inputClean) return item.a;
+            }
+
+            // 2. Keyword Matching
+            let bestMatch = null;
+            let highestScore = 0;
+
+            for (let item of qaData) {
+                const qClean = item.q.toLowerCase().replace(/[^\w\säöüß]/gi, '');
+                const qWords = qClean.split(/\s+/);
+                let score = 0;
+
+                for (let w of inputWords) {
+                    if (qWords.includes(w)) score++;
+                }
+
+                if (score > highestScore) {
+                    highestScore = score;
+                    bestMatch = item.a;
+                }
+            }
+
+            if (highestScore > 0) return bestMatch;
+
+            // 3. Fallback
+            if (inputClean.includes('hallo') || inputClean.includes('hi') || inputClean.includes('hey')) {
+                return "Hallo! Ich bin der Bilal Today Assistant. Wie kann ich dir helfen?";
+            }
+
+            return "Das habe ich leider nicht genau verstanden. Ich bin auf Fragen rund um 'Bilal Today' spezialisiert. Frag mich doch zum Beispiel, wer hinter Bilal Today steckt!";
+        }
+
+        // ==========================================
+        // 💬 NACHRICHTEN HANDLING
+        // ==========================================
+        function createMessageElement(role, content, shouldType = false) {
+            const isBot = role === 'bot';
+            const wrapper = document.createElement('div');
+            wrapper.className = `flex w-full mb-6 chat-bubble ${isBot ? 'justify-start' : 'justify-end'}`;
+
+            const inner = document.createElement('div');
+            inner.className = `flex max-w-[85%] md:max-w-[75%] ${isBot ? 'flex-row' : 'flex-row-reverse'} gap-3 md:gap-4`;
+
+            // Avatar
+            const avatar = document.createElement('div');
+            avatar.className = `flex-shrink-0 w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center shadow-md ${isBot ? 'bg-[#19c37d]' : 'bg-[#5436DA]'}`;
+            avatar.innerHTML = isBot ? '<i class="ph-fill ph-robot text-white text-lg md:text-xl"></i>' : '<i class="ph-fill ph-user text-white text-lg md:text-xl"></i>';
+
+            // Bubble
+            const bubble = document.createElement('div');
+            bubble.className = `px-4 py-3 rounded-2xl shadow-sm text-sm md:text-base leading-relaxed ${
+                isBot 
+                ? 'bg-[#2f2f2f] text-gray-100 rounded-tl-sm border border-gray-700' 
+                : 'bg-[#2f2f2f] text-gray-100 rounded-tr-sm border border-gray-700'
+            }`;
+
+            // Wenn Bot, zeige den Text im ChatGPT-Style (nur Farbe anders)
+            // Hier nutzen wir dieselbe Farbe für Bubbles, um nah am echten ChatGPT zu sein (Dark Mode: #2f2f2f)
+
+            const textSpan = document.createElement('span');
+            textSpan.className = 'whitespace-pre-wrap';
+            
+            if (shouldType && isBot) {
+                // Typing Effekt
+                bubble.appendChild(textSpan);
+                const cursor = document.createElement('span');
+                cursor.className = 'cursor';
+                bubble.appendChild(cursor);
+                
+                let i = 0;
+                isTyping = true;
+                
+                function typeChar() {
+                    if (i < content.length) {
+                        textSpan.textContent += content.charAt(i);
+                        i++;
+                        scrollToBottom();
+                        // Zufällige Tipp-Geschwindigkeit für Realismus
+                        setTimeout(typeChar, Math.random() * 20 + 10); 
+                    } else {
+                        cursor.remove();
+                        isTyping = false;
+                    }
+                }
+                typeChar();
+            } else {
+                textSpan.textContent = content;
+                bubble.appendChild(textSpan);
+            }
+
+            inner.appendChild(avatar);
+            inner.appendChild(bubble);
+            wrapper.appendChild(inner);
+
+            return wrapper;
+        }
+
+        function handleQuickQuestion(text) {
+            userInput.value = text;
+            sendMessage();
+        }
+
+        function sendMessage() {
+            if (isTyping) return; // Nicht senden, während KI tippt
+            const text = userInput.value.trim();
+            if (!text) return;
+
+            // Welcome Screen ausblenden, Chat einblenden
+            welcomeScreen.classList.add('hidden');
+            chatMessages.classList.remove('hidden');
+
+            // 1. User Message hinzufügen
+            chatMessages.appendChild(createMessageElement('user', text, false));
+            userInput.value = '';
+            userInput.style.height = '56px';
+            sendBtn.disabled = true;
+            scrollToBottom();
+
+            // 2. Lade-Animation anzeigen
+            loadingIndicator.classList.remove('hidden');
+            scrollToBottom();
+
+            // 3. Antwort simulieren (Verzögerung)
+            setTimeout(() => {
+                loadingIndicator.classList.add('hidden');
+                const botReply = getBotResponse(text);
+                chatMessages.appendChild(createMessageElement('bot', botReply, true));
+            }, 600 + Math.random() * 600);
+        }
+
+        function startNewChat() {
+            if (isTyping) return;
+            chatMessages.innerHTML = '';
+            chatMessages.classList.add('hidden');
+            welcomeScreen.classList.remove('hidden');
+            userInput.value = '';
+            userInput.style.height = '56px';
+            sendBtn.disabled = true;
+        }
+    </script>
+</body>
+</html>
+
