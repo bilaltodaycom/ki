@@ -1,0 +1,573 @@
+```react
+import React, { useState, useEffect, useRef } from 'react';
+import { Camera, Phone, Video, MoreVertical, Send, Check, CheckCheck, ChevronLeft, Search, Paperclip, Mic, Smile, Circle, Info } from 'lucide-react';
+
+// ==========================================
+// 🗄️ LOKALE DATENBANK & KI-LOGIK (Keine API)
+// ==========================================
+
+const INITIAL_CHATS = [
+  {
+    id: 'unbekannt',
+    name: 'Unbekannte Nummer',
+    phone: '+49 151 4582910',
+    avatar: 'https://api.dicebear.com/7.x/initials/svg?seed=U&backgroundColor=374151',
+    unread: 1,
+    isOnline: true,
+    typing: false,
+    currentNode: 'start'
+  },
+  {
+    id: 'sarah',
+    name: 'Sarah 💔',
+    phone: '+49 176 8829102',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah&backgroundColor=b6e3f4',
+    unread: 2,
+    isOnline: false,
+    typing: false,
+    currentNode: 'sarah_start'
+  }
+];
+
+// Die Dialog-Bäume (Die "KI")
+const STORY_DB = {
+  // --- STORY 1: UNBEKANNTE NUMMER (Psychothriller) ---
+  'unbekannt': {
+    'start': {
+      messages: [
+        { sender: 'npc', text: 'Ich sehe dich.', delay: 2000 },
+        { sender: 'npc', text: 'Schönes Shirt, das du heute trägst.', delay: 3000 }
+      ],
+      choices: [
+        { text: 'Wer ist da?!', next: 'wer_da', effect: { trust: -1 } },
+        { text: 'Sehr witzig. Wer bist du?', next: 'witzig', effect: { trust: 0 } },
+        { text: '(Blockieren)', next: 'block', effect: { trust: -5 } }
+      ]
+    },
+    'wer_da': {
+      messages: [
+        { sender: 'npc', text: 'Jemand, der auf dich aufpasst.', delay: 2500 },
+        { sender: 'npc', text: 'Du solltest dein Fenster schließen. Es zieht.', delay: 4000 }
+      ],
+      choices: [
+        { text: 'Ich rufe die Polizei!', next: 'polizei' },
+        { text: 'Was willst du von mir?', next: 'was_willst_du' }
+      ]
+    },
+    'witzig': {
+      messages: [
+        { sender: 'npc', text: 'Du denkst, das ist ein Scherz?', delay: 2000 },
+        { sender: 'npc', text: 'Guck aus dem Fenster.', delay: 3000 }
+      ],
+      choices: [
+        { text: 'Da ist niemand.', next: 'niemand' },
+        { text: 'Ich habe die Rollos unten, Idiot.', next: 'rollos' }
+      ]
+    },
+    'block': {
+      messages: [
+        { sender: 'npc', text: 'Das würde ich an deiner Stelle nicht tun...', delay: 1500 },
+        { sender: 'npc', text: 'SYSTEM: Kontakt konnte nicht blockiert werden.', type: 'system', delay: 2000 }
+      ],
+      choices: [
+        { text: 'Wie hast du das gemacht?!', next: 'hacker' },
+        { text: 'Lass mich in Ruhe!', next: 'was_willst_du' }
+      ]
+    },
+    'polizei': {
+      messages: [
+        { sender: 'npc', text: 'Die Polizei kann dir nicht helfen.', delay: 2000 },
+        { sender: 'npc', text: 'Nicht bei dem, was du letzten Sommer getan hast.', delay: 3000 }
+      ],
+      choices: [
+        { text: 'Woher weißt du das?!', next: 'geheimnis_reveal', clue: 'Stalker weiß vom Sommer' }
+      ]
+    },
+    // Fallback/End-Node for Demo
+    'was_willst_du': {
+      messages: [
+        { sender: 'npc', text: 'Die Wahrheit.', delay: 2000 },
+        { sender: 'npc', text: 'Wir spielen ein kleines Spiel. Bereit?', delay: 3000 }
+      ],
+      choices: [] // Spiel pausiert hier für die Demo
+    }
+  },
+
+  // --- STORY 2: SARAH (Krimi/Beziehung) ---
+  'sarah': {
+    'sarah_start': {
+      messages: [
+        { sender: 'npc', text: 'Hey... bist du wach?', delay: 1000 },
+        { sender: 'npc', text: 'Bitte sag mir, dass du das gestern mit Mark nicht warst...', delay: 3500 }
+      ],
+      choices: [
+        { text: 'Wovon redest du?', next: 'sarah_ahnungslos' },
+        { text: 'Sarah, beruhig dich. Was ist passiert?', next: 'sarah_beruhigen' },
+        { text: 'Ich kann das erklären...', next: 'sarah_gestaendnis' }
+      ]
+    },
+    'sarah_ahnungslos': {
+      messages: [
+        { sender: 'npc', text: 'Tu nicht so!', delay: 1500 },
+        { sender: 'npc', text: 'Die Polizei hat seine Leiche gefunden. Und dein Auto stand in der Nähe.', delay: 4000 }
+      ],
+      choices: [
+        { text: 'Mein Auto wurde gestohlen!', next: 'sarah_ausrede' },
+        { text: 'Oh mein Gott... Mark ist tot?', next: 'sarah_schock' }
+      ]
+    },
+    'sarah_beruhigen': {
+      messages: [
+        { sender: 'npc', text: 'Wie soll ich mich beruhigen?!', delay: 2000 },
+        { sender: 'npc', text: 'Mark ist tot. Jemand hat ihn ermordet.', delay: 3000 }
+      ],
+      choices: [
+        { text: 'Was?! Wann ist das passiert?', next: 'sarah_schock' }
+      ]
+    }
+  }
+};
+
+
+// ==========================================
+// 🎨 HAUPT-APP KOMPONENTE
+// ==========================================
+
+export default function App() {
+  const [appState, setAppState] = useState('BOOT'); // BOOT, START, HOME, CHAT
+  const [activeChatId, setActiveChatId] = useState(null);
+  
+  // Game State
+  const [chats, setChats] = useState(INITIAL_CHATS);
+  const [messages, setMessages] = useState({
+    'unbekannt': [],
+    'sarah': []
+  });
+  const [playerInventory, setPlayerInventory] = useState([]);
+  const [relationships, setRelationships] = useState({});
+  const [notification, setNotification] = useState(null);
+
+  // Engine Refs
+  const messagesEndRef = useRef(null);
+  const chatScrollRef = useRef(null);
+
+  // Auto-Scroll
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, chats, activeChatId]);
+
+  // Boot Sequence
+  useEffect(() => {
+    if (appState === 'BOOT') {
+      setTimeout(() => setAppState('START'), 2500);
+    }
+  }, [appState]);
+
+  // ==========================================
+  // 🧠 KI-ENGINE (Nachrichten-Prozessor)
+  // ==========================================
+  const processNode = (chatId, nodeId) => {
+    const nodeData = STORY_DB[chatId][nodeId];
+    if (!nodeData) return;
+
+    let delayAccumulator = 0;
+
+    // Update Chat as "Typing"
+    setChats(prev => prev.map(c => c.id === chatId ? { ...c, typing: true, isOnline: true } : c));
+
+    nodeData.messages.forEach((msg, index) => {
+      delayAccumulator += msg.delay || 1000;
+
+      setTimeout(() => {
+        // Nachricht hinzufügen
+        setMessages(prev => ({
+          ...prev,
+          [chatId]: [...(prev[chatId] || []), { 
+            id: Date.now() + index, 
+            ...msg, 
+            timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) 
+          }]
+        }));
+
+        // Notification if not in this chat
+        if (activeChatId !== chatId && appState !== 'START') {
+            triggerNotification(chats.find(c => c.id === chatId)?.name || 'Neue Nachricht', msg.text);
+            // Increase unread
+            setChats(prev => prev.map(c => c.id === chatId ? { ...c, unread: (c.unread || 0) + 1 } : c));
+        }
+
+        // Wenn es die letzte Nachricht im Knoten ist, Tippen beenden und Optionen freigeben
+        if (index === nodeData.messages.length - 1) {
+          setChats(prev => prev.map(c => c.id === chatId ? { 
+            ...c, 
+            typing: false,
+            currentNode: nodeId,
+            pendingChoices: nodeData.choices
+          } : c));
+        }
+      }, delayAccumulator);
+    });
+  };
+
+  // Initialer Start der Chats, sobald auf HOME gegangen wird
+  useEffect(() => {
+    if (appState === 'HOME' && messages['unbekannt'].length === 0) {
+      // Starte die Storylines verzögert
+      setTimeout(() => processNode('unbekannt', 'start'), 2000);
+      setTimeout(() => processNode('sarah', 'sarah_start'), 5000);
+    }
+  }, [appState]);
+
+  // Handle User Choice
+  const handleChoice = (chatId, choice) => {
+    // 1. Eigene Nachricht in den Chat einfügen
+    setMessages(prev => ({
+      ...prev,
+      [chatId]: [...(prev[chatId] || []), { 
+        id: Date.now(), 
+        sender: 'user', 
+        text: choice.text,
+        timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+      }]
+    }));
+
+    // 2. Entscheidungs-Optionen ausblenden
+    setChats(prev => prev.map(c => c.id === chatId ? { ...c, pendingChoices: null } : c));
+
+    // 3. Effekte anwenden (Beziehung, Hinweise)
+    if (choice.effect) {
+      setRelationships(prev => ({
+        ...prev,
+        [chatId]: (prev[chatId] || 0) + (choice.effect.trust || 0)
+      }));
+    }
+    if (choice.clue) {
+      setPlayerInventory(prev => [...prev, choice.clue]);
+      triggerNotification('💡 Neuer Hinweis entdeckt!', choice.clue);
+    }
+
+    // 4. Nächsten Knoten triggern
+    if (choice.next) {
+      processNode(chatId, choice.next);
+    }
+  };
+
+  const triggerNotification = (title, text) => {
+    setNotification({ title, text });
+    if(navigator.vibrate) navigator.vibrate(200); // Optional vibration
+    setTimeout(() => setNotification(null), 4000);
+  };
+
+  const openChat = (id) => {
+    setActiveChatId(id);
+    setAppState('CHAT');
+    // Reset unread count
+    setChats(prev => prev.map(c => c.id === id ? { ...c, unread: 0 } : c));
+  };
+
+
+  // ==========================================
+  // 📱 UI KOMPONENTEN
+  // ==========================================
+
+  // --- 1. BOOT SCREEN ---
+  if (appState === 'BOOT') {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen bg-gray-950 text-white overflow-hidden relative">
+        <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-green-900/20 via-gray-950 to-gray-950"></div>
+        <div className="z-10 flex flex-col items-center">
+            <h1 className="text-4xl font-bold tracking-widest mb-2 text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-emerald-600 animate-pulse">
+              STORY CHAT
+            </h1>
+            <p className="text-gray-400 text-sm tracking-widest mb-12">Ein Spiel von BilalToday.com</p>
+            
+            <div className="w-48 h-1 bg-gray-800 rounded-full overflow-hidden mt-8">
+              <div className="h-full bg-green-500 w-full animate-[loading_2.5s_ease-in-out]"></div>
+            </div>
+        </div>
+        <style dangerouslySetInnerHTML={{__html: `
+          @keyframes loading {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(0); }
+          }
+        `}} />
+      </div>
+    );
+  }
+
+  // --- 2. START SCREEN ---
+  if (appState === 'START') {
+    return (
+      <div className="flex flex-col h-screen bg-gray-950 text-white relative">
+        <div className="flex-1 flex flex-col items-center justify-center p-6 text-center z-10">
+          <div className="w-24 h-24 bg-green-500 rounded-full flex items-center justify-center mb-8 shadow-[0_0_40px_rgba(34,197,94,0.4)]">
+            <Phone size={40} className="text-gray-950" />
+          </div>
+          <h1 className="text-3xl font-bold mb-2">Willkommen Ermittler</h1>
+          <p className="text-gray-400 mb-12 max-w-sm">
+            Deine Entscheidungen verändern die Geschichte. Achte auf Details, vertraue niemandem blind.
+          </p>
+          <button 
+            onClick={() => setAppState('HOME')}
+            className="w-full max-w-xs bg-green-600 hover:bg-green-500 text-white font-bold py-4 px-8 rounded-full shadow-lg transform transition active:scale-95"
+          >
+            Spiel Starten
+          </button>
+          <div className="mt-8 text-xs text-gray-600 font-semibold tracking-wider">
+            WWW.BILALTODAY.COM
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // --- GLOBAL NOTIFICATION SYSTEM ---
+  const NotificationOverlay = () => (
+    notification && (
+      <div className="absolute top-4 left-4 right-4 bg-gray-800 border border-gray-700 rounded-2xl shadow-2xl p-4 z-50 flex items-start space-x-3 animate-[slideDown_0.3s_ease-out]">
+        <div className="bg-green-500 p-2 rounded-full">
+          <Info size={20} className="text-white" />
+        </div>
+        <div className="flex-1">
+          <h4 className="text-white font-bold text-sm">{notification.title}</h4>
+          <p className="text-gray-300 text-sm line-clamp-1">{notification.text}</p>
+        </div>
+      </div>
+    )
+  );
+
+  // --- 3. HOME (CHAT LISTE) ---
+  if (appState === 'HOME') {
+    return (
+      <div className="flex flex-col h-screen bg-gray-950 text-white relative overflow-hidden">
+        <NotificationOverlay />
+        
+        {/* Header */}
+        <header className="bg-gray-900 pt-12 pb-4 px-4 flex justify-between items-center shadow-md">
+          <h1 className="text-xl font-bold text-gray-100">Chats</h1>
+          <div className="flex space-x-4 text-gray-400">
+            <Camera size={24} />
+            <Search size={24} />
+            <MoreVertical size={24} />
+          </div>
+        </header>
+
+        {/* Branding Banner */}
+        <div className="bg-emerald-900/30 py-1.5 px-4 flex items-center justify-center border-b border-gray-800">
+            <p className="text-[10px] text-emerald-500 uppercase tracking-widest font-bold">Ein interaktives Erlebnis von BilalToday.com</p>
+        </div>
+
+        {/* Chat List */}
+        <main className="flex-1 overflow-y-auto">
+          {chats.map(chat => {
+            const chatMsgs = messages[chat.id] || [];
+            const lastMsg = chatMsgs.length > 0 ? chatMsgs[chatMsgs.length - 1] : null;
+
+            return (
+              <div 
+                key={chat.id} 
+                onClick={() => openChat(chat.id)}
+                className="flex items-center px-4 py-3 hover:bg-gray-900 cursor-pointer active:bg-gray-800 transition"
+              >
+                <div className="relative">
+                  <img src={chat.avatar} alt={chat.name} className="w-14 h-14 rounded-full bg-gray-800 object-cover" />
+                  {chat.isOnline && <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 border-2 border-gray-950 rounded-full"></div>}
+                </div>
+                
+                <div className="ml-4 flex-1 border-b border-gray-800 pb-3 pt-1">
+                  <div className="flex justify-between items-center mb-1">
+                    <h2 className="font-semibold text-gray-100 text-lg">{chat.name}</h2>
+                    <span className="text-xs text-green-500">
+                      {lastMsg ? lastMsg.timestamp : ''}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <p className={`text-sm truncate pr-4 ${chat.unread > 0 ? 'text-gray-200 font-semibold' : 'text-gray-400'}`}>
+                      {chat.typing ? (
+                        <span className="text-green-500 italic">schreibt...</span>
+                      ) : (
+                        lastMsg ? (lastMsg.sender === 'user' ? 'Du: ' : '') + lastMsg.text : 'Keine Nachrichten'
+                      )}
+                    </p>
+                    {chat.unread > 0 && (
+                      <div className="bg-green-500 text-gray-950 text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full">
+                        {chat.unread}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </main>
+
+        {/* Fake Bottom Navigation */}
+        <footer className="bg-gray-900 border-t border-gray-800 py-2 flex justify-around pb-6">
+          <div className="flex flex-col items-center text-green-500">
+            <CheckCheck size={24} />
+            <span className="text-[10px] mt-1 font-semibold">Chats</span>
+          </div>
+          <div className="flex flex-col items-center text-gray-500">
+            <Circle size={24} />
+            <span className="text-[10px] mt-1">Status</span>
+          </div>
+          <div className="flex flex-col items-center text-gray-500">
+            <Phone size={24} />
+            <span className="text-[10px] mt-1">Anrufe</span>
+          </div>
+        </footer>
+      </div>
+    );
+  }
+
+  // --- 4. CHAT DETAIL SCREEN ---
+  if (appState === 'CHAT') {
+    const chat = chats.find(c => c.id === activeChatId);
+    const chatMsgs = messages[activeChatId] || [];
+
+    return (
+      <div className="flex flex-col h-screen bg-[#0b141a] relative">
+        <NotificationOverlay />
+        
+        {/* WhatsApp Background Pattern (Simulated with CSS) */}
+        <div className="absolute inset-0 opacity-5 pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
+
+        {/* Chat Header */}
+        <header className="bg-[#202c33] pt-12 pb-3 px-2 flex items-center shadow-sm z-10">
+          <button onClick={() => setAppState('HOME')} className="text-gray-300 p-2 -ml-2 rounded-full hover:bg-gray-700 active:bg-gray-600">
+            <ChevronLeft size={28} />
+          </button>
+          
+          <img src={chat.avatar} alt="Avatar" className="w-10 h-10 rounded-full ml-1 bg-gray-700" />
+          
+          <div className="ml-3 flex-1 cursor-pointer">
+            <h2 className="text-gray-100 font-semibold text-base leading-tight">{chat.name}</h2>
+            <p className="text-gray-400 text-xs">
+              {chat.typing ? 'schreibt...' : (chat.isOnline ? 'online' : 'zuletzt heute um 14:32')}
+            </p>
+          </div>
+
+          <div className="flex space-x-5 text-gray-300 pr-2">
+            <Video size={22} />
+            <Phone size={22} />
+            <MoreVertical size={22} />
+          </div>
+        </header>
+
+        {/* Warnung/Verschlüsselung Text */}
+        <div className="flex justify-center mt-4 z-10">
+            <div className="bg-[#182229] text-[#ffd279] text-[11px] px-4 py-1.5 rounded-lg text-center max-w-[85%] shadow-sm">
+                🔒 Nachrichten sind Ende-zu-Ende verschlüsselt. <br/> Niemand außerhalb dieses Chats kann sie lesen.<br/>
+                <span className="text-gray-500 mt-1 block">Game Engine by BilalToday.com</span>
+            </div>
+        </div>
+
+        {/* Messages Area */}
+        <main 
+          ref={chatScrollRef}
+          className="flex-1 overflow-y-auto px-4 py-4 z-10 flex flex-col space-y-3"
+        >
+          {chatMsgs.map((msg, idx) => {
+            const isUser = msg.sender === 'user';
+            const isSystem = msg.type === 'system';
+
+            if (isSystem) {
+               return (
+                  <div key={msg.id} className="flex justify-center my-2">
+                      <div className="bg-gray-800/80 text-gray-300 text-xs px-3 py-1 rounded-full border border-gray-700">
+                          {msg.text}
+                      </div>
+                  </div>
+               )
+            }
+
+            return (
+              <div key={msg.id} className={`flex flex-col ${isUser ? 'items-end' : 'items-start'}`}>
+                <div className={`relative max-w-[80%] rounded-xl px-3 pt-2 pb-1.5 text-[15px] shadow-sm ${
+                  isUser ? 'bg-[#005c4b] text-gray-100 rounded-tr-none' : 'bg-[#202c33] text-gray-100 rounded-tl-none'
+                }`}>
+                  <p className="leading-snug break-words">{msg.text}</p>
+                  <div className="flex justify-end items-center mt-1 space-x-1">
+                    <span className="text-[10px] text-gray-400">{msg.timestamp}</span>
+                    {isUser && <CheckCheck size={14} className="text-[#53bdeb]" />}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+
+          {/* Typing Indicator */}
+          {chat.typing && (
+            <div className="flex items-start">
+              <div className="bg-[#202c33] rounded-xl rounded-tl-none px-4 py-3 shadow-sm flex space-x-1 items-center h-10">
+                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+              </div>
+            </div>
+          )}
+
+          <div ref={messagesEndRef} className="h-2" />
+        </main>
+
+        {/* Interactive Choices Area */}
+        {chat.pendingChoices && chat.pendingChoices.length > 0 && (
+          <div className="bg-[#202c33] p-4 rounded-t-3xl shadow-[0_-10px_20px_rgba(0,0,0,0.3)] z-20 pb-8 animate-[slideUp_0.3s_ease-out]">
+            <h3 className="text-center text-gray-400 text-xs uppercase tracking-widest mb-3 font-semibold">Deine Antwort:</h3>
+            <div className="flex flex-col space-y-2">
+              {chat.pendingChoices.map((choice, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => handleChoice(chat.id, choice)}
+                  className="bg-[#005c4b] hover:bg-[#00705a] text-white py-3 px-4 rounded-xl text-left font-medium transition active:scale-[0.98] shadow-sm flex justify-between items-center border border-[#00705a]"
+                >
+                  <span>{choice.text}</span>
+                  <ChevronLeft size={18} className="rotate-180 opacity-50" />
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Fake Input Area (Disabled during choices/typing) */}
+        {(!chat.pendingChoices || chat.pendingChoices.length === 0) && (
+           <div className="bg-[#0b141a] px-2 py-3 flex items-center z-20 pb-8">
+             <div className="flex-1 bg-[#202c33] rounded-full flex items-center px-3 py-2.5">
+               <Smile size={24} className="text-gray-400 mr-2" />
+               <input 
+                 type="text" 
+                 placeholder={chat.typing ? "Warte auf Antwort..." : "Antwort auswählen..."} 
+                 disabled 
+                 className="bg-transparent flex-1 outline-none text-gray-100 placeholder-gray-500 text-[15px]"
+               />
+               <Paperclip size={22} className="text-gray-400 ml-2" />
+               <Camera size={22} className="text-gray-400 ml-4 mr-1" />
+             </div>
+             <div className="bg-[#00a884] w-12 h-12 rounded-full flex items-center justify-center ml-2 shadow-sm text-[#0b141a]">
+               {chat.typing ? <Mic size={24} /> : <Send size={24} />}
+             </div>
+           </div>
+        )}
+        
+        <style dangerouslySetInnerHTML={{__html: `
+          @keyframes slideUp {
+            from { transform: translateY(100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+          }
+          @keyframes slideDown {
+            from { transform: translateY(-100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+          }
+        `}} />
+      </div>
+    );
+  }
+
+  return null;
+}
+
+```
