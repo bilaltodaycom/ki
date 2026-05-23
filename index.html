@@ -1,0 +1,581 @@
+
+import React, { useState, useEffect, useRef } from 'react';
+import { 
+  motion, 
+  useScroll, 
+  useTransform, 
+  useSpring, 
+  AnimatePresence,
+  useInView,
+  useMotionValue
+} from 'framer-motion';
+import { 
+  Smartphone, 
+  Wrench, 
+  ShoppingCart, 
+  LayoutDashboard, 
+  Briefcase, 
+  Cpu, 
+  Users, 
+  Layers,
+  ArrowRight,
+  Mail,
+  ChevronRight,
+  Activity,
+  BarChart3,
+  Globe
+} from 'lucide-react';
+
+// --- STYLES & UTILS ---
+const glassClass = "bg-white/[0.03] border border-white/[0.05] backdrop-blur-2xl";
+const textGradient = "bg-clip-text text-transparent bg-gradient-to-b from-white to-white/50";
+const textGradientAccent = "bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-indigo-500 to-purple-600";
+
+// --- COMPONENTS ---
+
+// 1. Custom Cursor
+const CustomCursor = () => {
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+
+  useEffect(() => {
+    const updateMousePosition = (e) => {
+      setMousePosition({ x: e.clientX, y: e.clientY });
+    };
+    window.addEventListener("mousemove", updateMousePosition);
+    return () => window.removeEventListener("mousemove", updateMousePosition);
+  }, []);
+
+  return (
+    <motion.div
+      className="fixed top-0 left-0 w-8 h-8 rounded-full border border-white/30 pointer-events-none z-[100] mix-blend-difference hidden md:flex items-center justify-center"
+      animate={{
+        x: mousePosition.x - 16,
+        y: mousePosition.y - 16,
+      }}
+      transition={{ type: "spring", stiffness: 500, damping: 28, mass: 0.5 }}
+    >
+      <div className="w-1 h-1 bg-white rounded-full" />
+    </motion.div>
+  );
+};
+
+// 2. Loading Screen
+const LoadingScreen = ({ onComplete }) => {
+  return (
+    <motion.div
+      className="fixed inset-0 z-[200] bg-black flex flex-col items-center justify-center"
+      initial={{ y: 0 }}
+      exit={{ y: "-100%", transition: { duration: 0.8, ease: [0.76, 0, 0.24, 1] } }}
+    >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 1, delay: 0.2 }}
+        className="text-4xl md:text-6xl font-semibold tracking-tighter text-white flex items-center gap-4"
+      >
+        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 animate-pulse" />
+        BilalToday.
+      </motion.div>
+      <motion.div 
+        className="mt-8 w-48 h-1 bg-white/10 rounded-full overflow-hidden"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.5 }}
+      >
+        <motion.div 
+          className="h-full bg-white"
+          initial={{ width: "0%" }}
+          animate={{ width: "100%" }}
+          transition={{ duration: 1.5, ease: "easeInOut" }}
+          onAnimationComplete={onComplete}
+        />
+      </motion.div>
+    </motion.div>
+  );
+};
+
+// 3. Navbar
+const Navbar = () => {
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 50);
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  return (
+    <motion.nav
+      className={`fixed top-0 w-full z-50 transition-all duration-300 ${
+        scrolled ? "bg-black/50 backdrop-blur-xl border-b border-white/5 py-4" : "bg-transparent py-6"
+      }`}
+      initial={{ y: -100 }}
+      animate={{ y: 0 }}
+      transition={{ duration: 0.8, delay: 2 }}
+    >
+      <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-purple-600" />
+          <span className="text-white font-medium tracking-tight text-lg">BilalToday.com</span>
+        </div>
+        <div className="hidden md:flex items-center gap-8 text-sm font-medium text-zinc-400">
+          <a href="#features" className="hover:text-white transition-colors">Plattform</a>
+          <a href="#app" className="hover:text-white transition-colors">App</a>
+          <a href="#ai" className="hover:text-white transition-colors">KI & Zukunft</a>
+        </div>
+        <button className="bg-white text-black px-5 py-2 rounded-full text-sm font-medium hover:scale-105 transition-transform flex items-center gap-2">
+          Kontakt <ArrowRight size={14} />
+        </button>
+      </div>
+    </motion.nav>
+  );
+};
+
+// 4. Tilt Card Component for 3D Effects
+const TiltCard = ({ children, className }) => {
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
+  const mouseXSpring = useSpring(x);
+  const mouseYSpring = useSpring(y);
+  
+  const rotateX = useTransform(mouseYSpring, [-0.5, 0.5], ["10deg", "-10deg"]);
+  const rotateY = useTransform(mouseXSpring, [-0.5, 0.5], ["-10deg", "10deg"]);
+
+  const handleMouseMove = (e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const width = rect.width;
+    const height = rect.height;
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+    const xPct = mouseX / width - 0.5;
+    const yPct = mouseY / height - 0.5;
+    x.set(xPct);
+    y.set(yPct);
+  };
+
+  const handleMouseLeave = () => {
+    x.set(0);
+    y.set(0);
+  };
+
+  return (
+    <motion.div
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+      style={{ rotateY, rotateX, transformStyle: "preserve-3d" }}
+      className={`relative rounded-3xl ${glassClass} ${className}`}
+      whileHover={{ scale: 1.02 }}
+      transition={{ type: "spring", stiffness: 400, damping: 30 }}
+    >
+      <div style={{ transform: "translateZ(50px)" }} className="h-full">
+        {children}
+      </div>
+    </motion.div>
+  );
+};
+
+// --- SECTIONS ---
+
+const HeroSection = () => {
+  return (
+    <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
+      {/* Background Gradients */}
+      <div className="absolute inset-0 flex items-center justify-center opacity-40">
+        <div className="w-[60vw] h-[60vw] max-w-[800px] max-h-[800px] bg-blue-600/30 rounded-full blur-[120px] mix-blend-screen animate-pulse" />
+        <div className="absolute w-[50vw] h-[50vw] max-w-[600px] max-h-[600px] bg-purple-600/20 rounded-full blur-[100px] mix-blend-screen translate-x-1/4 -translate-y-1/4" />
+      </div>
+
+      <div className="relative z-10 max-w-5xl mx-auto px-6 text-center">
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 1, delay: 2.2 }}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-white/10 bg-white/5 backdrop-blur-md mb-8"
+        >
+          <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+          <span className="text-sm font-medium text-zinc-300">System v2.0 Live</span>
+        </motion.div>
+        
+        <motion.h1 
+          className="text-6xl md:text-8xl lg:text-9xl font-semibold tracking-tighter mb-8 text-white leading-[0.9]"
+          initial={{ opacity: 0, y: 50 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 1, delay: 2.4, ease: [0.16, 1, 0.3, 1] }}
+        >
+          Die <span className={textGradientAccent}>All-in-One</span><br/>Platform.
+        </motion.h1>
+
+        <motion.p 
+          className="text-xl md:text-2xl text-zinc-400 max-w-2xl mx-auto mb-12 font-light"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 1, delay: 2.6 }}
+        >
+          Tools, Verwaltung, Innovation und digitale Lösungen – alles an einem Ort. Bereit für die Zukunft deines Unternehmens.
+        </motion.p>
+
+        <motion.div 
+          className="flex flex-col sm:flex-row items-center justify-center gap-4"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 1, delay: 2.8 }}
+        >
+          <button className="w-full sm:w-auto px-8 py-4 bg-white text-black rounded-full font-semibold text-lg hover:scale-105 transition-all shadow-[0_0_40px_rgba(255,255,255,0.3)]">
+            Plattform entdecken
+          </button>
+          <button className="w-full sm:w-auto px-8 py-4 bg-white/5 border border-white/10 text-white rounded-full font-medium text-lg hover:bg-white/10 transition-all backdrop-blur-md">
+            Kontakt aufnehmen
+          </button>
+        </motion.div>
+      </div>
+
+      {/* Floating Elements / Particles */}
+      <motion.div 
+        className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-zinc-500"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 3.5, duration: 1 }}
+      >
+        <span className="text-xs uppercase tracking-widest">Scrollen zum Entdecken</span>
+        <motion.div 
+          animate={{ y: [0, 10, 0] }} 
+          transition={{ repeat: Infinity, duration: 2 }}
+          className="w-px h-12 bg-gradient-to-b from-zinc-500 to-transparent"
+        />
+      </motion.div>
+    </section>
+  );
+};
+
+const AboutSection = () => {
+  const ref = useRef(null);
+  const isInView = useInView(ref, { once: true, margin: "-100px" });
+
+  const stats = [
+    { label: "Plattform", value: "1", sub: "Alles zentralisiert" },
+    { label: "Möglichkeiten", value: "∞", sub: "Unbegrenzte Skalierung" },
+    { label: "Entwicklung", value: "24/7", sub: "Stetige Erweiterung" }
+  ];
+
+  return (
+    <section className="py-32 relative z-20 bg-black" ref={ref}>
+      <div className="max-w-7xl mx-auto px-6">
+        <div className="grid md:grid-cols-2 gap-16 items-center">
+          <motion.div
+            initial={{ opacity: 0, x: -50 }}
+            animate={isInView ? { opacity: 1, x: 0 } : {}}
+            transition={{ duration: 1 }}
+          >
+            <h2 className="text-4xl md:text-6xl font-semibold tracking-tighter mb-6">
+              Eine Plattform.<br/>
+              <span className="text-zinc-500">Unzählige Möglichkeiten.</span>
+            </h2>
+            <p className="text-lg text-zinc-400 mb-8 max-w-md">
+              BilalToday.com vereint moderne Werkzeuge und digitale Lösungen in einer einzigen, nahtlosen Erfahrung. Verwalte Projekte, Bestellungen und Tools so effizient wie nie zuvor.
+            </p>
+          </motion.div>
+          
+          <div className="grid grid-cols-2 gap-4">
+            {stats.map((stat, i) => (
+              <motion.div
+                key={i}
+                className={`p-8 rounded-3xl ${glassClass} flex flex-col justify-center ${i === 2 ? 'col-span-2' : ''}`}
+                initial={{ opacity: 0, y: 30 }}
+                animate={isInView ? { opacity: 1, y: 0 } : {}}
+                transition={{ duration: 0.8, delay: i * 0.2 }}
+              >
+                <div className="text-5xl md:text-7xl font-semibold text-white mb-2">{stat.value}</div>
+                <div className="text-lg font-medium text-zinc-300">{stat.label}</div>
+                <div className="text-sm text-zinc-500">{stat.sub}</div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+};
+
+const FeaturesSection = () => {
+  const features = [
+    { icon: Smartphone, title: "Eigene App", desc: "Native Performance für unterwegs." },
+    { icon: Wrench, title: "Integrierte Tools", desc: "Alles was du brauchst, direkt integriert." },
+    { icon: ShoppingCart, title: "Bestellverwaltung", desc: "Behalte den Überblick über alle Sales." },
+    { icon: LayoutDashboard, title: "Modernes Dashboard", desc: "Analysen und Daten in Echtzeit." },
+    { icon: Briefcase, title: "Projektübersicht", desc: "Alle Aufgaben zentral an einem Ort." },
+    { icon: Cpu, title: "KI-Unterstützung", desc: "Smarte Automatisierung für deinen Alltag." },
+    { icon: Users, title: "Benutzerverwaltung", desc: "Team-Management leicht gemacht." },
+    { icon: Layers, title: "Zentrale Plattform", desc: "Ein Login für das gesamte Ökosystem." }
+  ];
+
+  return (
+    <section id="features" className="py-32 relative bg-black">
+      <div className="max-w-7xl mx-auto px-6">
+        <div className="text-center mb-24">
+          <h2 className="text-4xl md:text-6xl font-semibold tracking-tighter mb-6">Leistungsstarke Funktionen</h2>
+          <p className="text-xl text-zinc-400">Entwickelt für Effizienz. Gebaut für die Zukunft.</p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {features.map((feat, i) => (
+            <TiltCard key={i} className="p-8">
+              <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center mb-6 border border-white/10">
+                <feat.icon size={24} className="text-white" />
+              </div>
+              <h3 className="text-xl font-semibold text-white mb-3">{feat.title}</h3>
+              <p className="text-zinc-400 leading-relaxed">{feat.desc}</p>
+            </TiltCard>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+};
+
+const AppShowcaseSection = () => {
+  const containerRef = useRef(null);
+  const { scrollYProgress } = useScroll({
+    target: containerRef,
+    offset: ["start start", "end end"]
+  });
+
+  const scale = useTransform(scrollYProgress, [0, 0.5], [0.8, 1]);
+  const opacity = useTransform(scrollYProgress, [0, 0.3], [0.3, 1]);
+  const y = useTransform(scrollYProgress, [0, 0.5], [100, 0]);
+
+  return (
+    <section id="app" ref={containerRef} className="h-[200vh] relative bg-black">
+      <div className="sticky top-0 h-screen flex flex-col items-center justify-center overflow-hidden px-6">
+        
+        <motion.div style={{ opacity, y }} className="text-center mb-12 z-20">
+          <h2 className="text-4xl md:text-7xl font-semibold tracking-tighter mb-4">Das gesamte System.<br/>In deiner Tasche.</h2>
+          <p className="text-xl text-zinc-400">Verwalte BilalToday.com nahtlos von überall aus.</p>
+        </motion.div>
+
+        <motion.div 
+          style={{ scale }}
+          className="relative w-[320px] md:w-[800px] h-[600px] md:h-[500px] rounded-[3rem] md:rounded-[2rem] border-[8px] border-zinc-800 bg-zinc-950 overflow-hidden shadow-2xl flex flex-col md:flex-row"
+        >
+          {/* Glass Glare Effect */}
+          <div className="absolute inset-0 bg-gradient-to-tr from-white/5 to-transparent pointer-events-none z-10" />
+          
+          {/* Mockup Sidebar (Desktop) */}
+          <div className="hidden md:flex w-64 border-r border-white/10 bg-black/50 flex-col p-6">
+            <div className="text-white font-semibold mb-8 flex items-center gap-2">
+              <div className="w-4 h-4 rounded-full bg-blue-500"/> Workspace
+            </div>
+            <div className="flex flex-col gap-4 text-sm text-zinc-400">
+              <div className="flex items-center gap-3 bg-white/10 text-white p-2 rounded-lg"><LayoutDashboard size={16}/> Dashboard</div>
+              <div className="flex items-center gap-3 p-2"><ShoppingCart size={16}/> Orders</div>
+              <div className="flex items-center gap-3 p-2"><Activity size={16}/> Analytics</div>
+              <div className="flex items-center gap-3 p-2"><Users size={16}/> Team</div>
+            </div>
+          </div>
+
+          {/* Mockup Main Content */}
+          <div className="flex-1 p-6 md:p-10 relative">
+            <div className="flex justify-between items-center mb-8">
+              <div>
+                <div className="text-white text-2xl font-semibold">Overview</div>
+                <div className="text-zinc-500 text-sm">Welcome back, Admin</div>
+              </div>
+              <div className="w-10 h-10 rounded-full bg-gradient-to-r from-purple-500 to-blue-500" />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 mb-6">
+              <div className="bg-white/5 border border-white/5 p-4 rounded-2xl">
+                <div className="text-zinc-500 text-sm mb-1">Total Revenue</div>
+                <div className="text-white text-2xl font-medium">$124,500</div>
+              </div>
+              <div className="bg-white/5 border border-white/5 p-4 rounded-2xl">
+                <div className="text-zinc-500 text-sm mb-1">Active Projects</div>
+                <div className="text-white text-2xl font-medium">34</div>
+              </div>
+            </div>
+
+            <div className="bg-white/5 border border-white/5 p-6 rounded-2xl h-48 flex items-end justify-between gap-2">
+              {[40, 70, 45, 90, 65, 85, 100].map((h, i) => (
+                <motion.div 
+                  key={i}
+                  initial={{ height: 0 }}
+                  whileInView={{ height: `${h}%` }}
+                  transition={{ duration: 1, delay: i * 0.1 }}
+                  className="w-full bg-gradient-to-t from-blue-600 to-purple-500 rounded-t-sm"
+                />
+              ))}
+            </div>
+          </div>
+        </motion.div>
+      </div>
+    </section>
+  );
+};
+
+const ToolsSection = () => {
+  return (
+    <section className="py-32 relative bg-black overflow-hidden">
+      <div className="max-w-7xl mx-auto px-6 relative z-10">
+        <div className="flex flex-col md:flex-row justify-between items-end mb-20 gap-8">
+          <div>
+            <h2 className="text-4xl md:text-6xl font-semibold tracking-tighter mb-4">Ein Ökosystem<br/>voller Tools.</h2>
+            <p className="text-xl text-zinc-400">Nahtlos integriert. Perfekt synchronisiert.</p>
+          </div>
+          <button className="px-6 py-3 rounded-full bg-white/10 text-white font-medium hover:bg-white/20 transition-colors flex items-center gap-2">
+            Alle Tools ansehen <ChevronRight size={16}/>
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {[
+            { title: "Analytics Engine", color: "from-blue-500/20 to-transparent", icon: BarChart3 },
+            { title: "Global Sync", color: "from-purple-500/20 to-transparent", icon: Globe },
+            { title: "Task Manager", color: "from-emerald-500/20 to-transparent", icon: Activity }
+          ].map((tool, i) => (
+            <motion.div
+              key={i}
+              whileHover={{ y: -10 }}
+              className={`p-8 rounded-[2rem] border border-white/10 bg-gradient-to-b ${tool.color} bg-black backdrop-blur-xl relative overflow-hidden group`}
+            >
+              <div className="absolute top-0 right-0 p-6 opacity-20 group-hover:opacity-100 transition-opacity transform group-hover:scale-110 duration-500">
+                <tool.icon size={120} className="text-white" />
+              </div>
+              <div className="relative z-10 mt-32">
+                <h3 className="text-2xl font-semibold text-white mb-2">{tool.title}</h3>
+                <p className="text-zinc-400">Entdecke leistungsstarke Features, die deinen Workflow beschleunigen.</p>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+};
+
+const AiSection = () => {
+  return (
+    <section id="ai" className="py-40 relative bg-black flex items-center justify-center overflow-hidden">
+      {/* AI Glowing Network Background */}
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+        <motion.div 
+          animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.6, 0.3] }}
+          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+          className="w-[80vw] h-[80vw] md:w-[600px] md:h-[600px] bg-gradient-to-r from-blue-600 via-indigo-500 to-purple-600 rounded-full blur-[100px] md:blur-[150px] opacity-30 mix-blend-screen"
+        />
+      </div>
+
+      <div className="max-w-4xl mx-auto px-6 text-center relative z-10">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8 }}
+          whileInView={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 1 }}
+          viewport={{ once: true }}
+        >
+          <Cpu size={48} className="mx-auto text-white mb-8" />
+          <h2 className="text-5xl md:text-8xl font-semibold tracking-tighter mb-8">
+            Bereit für die<br/><span className={textGradientAccent}>nächste Generation.</span>
+          </h2>
+          <p className="text-xl md:text-2xl text-zinc-300 mb-12 font-light">
+            Zukünftige KI-Funktionen analysieren Daten, automatisieren Routineaufgaben und skalieren dein Geschäft intelligent.
+          </p>
+          <button className="px-8 py-4 bg-white/10 backdrop-blur-md border border-white/20 text-white rounded-full font-medium text-lg hover:bg-white/20 transition-all shadow-[0_0_30px_rgba(255,255,255,0.1)]">
+            KI Roadmap entdecken
+          </button>
+        </motion.div>
+      </div>
+    </section>
+  );
+};
+
+const CtaSection = () => {
+  return (
+    <section className="py-32 bg-black relative border-t border-white/5">
+      <div className="max-w-5xl mx-auto px-6 text-center">
+        <h2 className="text-5xl md:text-7xl font-semibold tracking-tighter mb-8 text-white">
+          Bereit für BilalToday.com?
+        </h2>
+        <p className="text-xl text-zinc-400 mb-12">
+          Schließe dich der Plattform an und transformiere dein digitales Management.
+        </p>
+        <div className="flex flex-col sm:flex-row justify-center gap-4">
+          <button className="px-8 py-4 bg-white text-black rounded-full font-semibold text-lg hover:scale-105 transition-transform flex items-center justify-center gap-2">
+            Jetzt starten <ArrowRight size={20} />
+          </button>
+          <a href="mailto:info@bilaltoday.com" className="px-8 py-4 bg-white/5 border border-white/10 text-white rounded-full font-medium text-lg hover:bg-white/10 transition-colors flex items-center justify-center gap-2">
+            <Mail size={20} /> info@BilalToday.com
+          </a>
+        </div>
+      </div>
+    </section>
+  );
+};
+
+const Footer = () => {
+  return (
+    <footer className="bg-black py-12 border-t border-white/10">
+      <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6">
+        <div className="flex items-center gap-2">
+          <div className="w-5 h-5 rounded-full bg-gradient-to-br from-blue-500 to-purple-600" />
+          <span className="text-white font-medium tracking-tight">BilalToday.com</span>
+        </div>
+        
+        <div className="text-zinc-500 text-sm">
+          "The All-in-One Platform"
+        </div>
+
+        <div className="flex gap-6 text-sm text-zinc-400">
+          <a href="#" className="hover:text-white transition-colors">Datenschutz</a>
+          <a href="#" className="hover:text-white transition-colors">Impressum</a>
+          <a href="mailto:info@bilaltoday.com" className="hover:text-white transition-colors">Kontakt</a>
+        </div>
+      </div>
+      <div className="text-center text-zinc-600 text-xs mt-12">
+        &copy; {new Date().getFullYear()} BilalToday.com. Alle Rechte vorbehalten.
+      </div>
+    </footer>
+  );
+};
+
+// --- MAIN APP COMPONENT ---
+
+export default function App() {
+  const [loading, setLoading] = useState(true);
+
+  // Smooth scroll behavior for html tag
+  useEffect(() => {
+    document.documentElement.style.scrollBehavior = "smooth";
+    document.body.style.backgroundColor = "#000";
+    document.body.style.color = "#fff";
+  }, []);
+
+  return (
+    <div className="bg-black min-h-screen font-sans selection:bg-purple-500/30 selection:text-white">
+      <CustomCursor />
+      
+      <AnimatePresence>
+        {loading && <LoadingScreen onComplete={() => setLoading(false)} />}
+      </AnimatePresence>
+
+      {!loading && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 1 }}
+        >
+          <Navbar />
+          <main>
+            <HeroSection />
+            <AboutSection />
+            <FeaturesSection />
+            <AppShowcaseSection />
+            <ToolsSection />
+            <AiSection />
+            <CtaSection />
+          </main>
+          <Footer />
+        </motion.div>
+      )}
+    </div>
+  );
+}
+
+
